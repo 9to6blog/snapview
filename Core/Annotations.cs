@@ -1714,6 +1714,62 @@ namespace SnapView.Core
         }
 
         /// <summary>
+        /// 보간 방식을 골라 크기를 바꾼다. 도트·UI 캡처를 정수 배로 키울 때는
+        /// 최근접이어야 픽셀이 안 뭉개지고, 사진은 고품질 보간이 자연스럽다.
+        /// </summary>
+        internal static BitmapSource Resize(BitmapSource source, int width, int height,
+                                            BitmapScalingMode scaling)
+        {
+            width = Math.Max(1, width);
+            height = Math.Max(1, height);
+
+            // 확대일 때 RenderTargetBitmap 은 NearestNeighbor 를 무시하고 부드럽게 늘린다
+            // (오프스크린 렌더러의 동작). 도트·UI 캡처를 정수 배로 키울 때 픽셀이 뭉개지면
+            // 안 되므로 최근접은 픽셀 복사로 직접 한다.
+            if (scaling == BitmapScalingMode.NearestNeighbor)
+                return ResizeNearest(source, width, height);
+
+            var visual = new DrawingVisual();
+            using (DrawingContext dc = visual.RenderOpen())
+                dc.DrawImage(source, new Rect(0, 0, width, height));
+
+            var rtb = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(visual);
+            rtb.Freeze();
+            return WithDpiOf(rtb, source);
+        }
+
+        /// <summary>최근접 확대·축소 — 결과 픽셀마다 원본 픽셀 하나를 그대로 가져온다.</summary>
+        private static BitmapSource ResizeNearest(BitmapSource source, int width, int height)
+        {
+            BitmapSource src = source.Format == PixelFormats.Bgra32
+                ? source
+                : new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+
+            int sw = src.PixelWidth, sh = src.PixelHeight;
+            var s = new byte[sw * sh * 4];
+            src.CopyPixels(s, sw * 4, 0);
+
+            var d = new byte[width * height * 4];
+            for (int y = 0; y < height; y++)
+            {
+                int sy = Math.Min(sh - 1, y * sh / height);
+                int srow = sy * sw * 4, drow = y * width * 4;
+                for (int x = 0; x < width; x++)
+                {
+                    int sx = Math.Min(sw - 1, x * sw / width);
+                    int si = srow + sx * 4, di = drow + x * 4;
+                    d[di] = s[si]; d[di + 1] = s[si + 1]; d[di + 2] = s[si + 2]; d[di + 3] = s[si + 3];
+                }
+            }
+
+            var bmp = BitmapSource.Create(width, height, source.DpiX, source.DpiY,
+                                          PixelFormats.Bgra32, null, d, width * 4);
+            bmp.Freeze();
+            return bmp;
+        }
+
+        /// <summary>
         /// 캔버스에 여백을 붙인다 — 그림은 <b>그대로</b> 두고 공간만 늘린다.
         /// 크기 조절(Resize)은 그림을 늘리지만, 이건 주석 달 자리·여백이 필요할 때 쓴다.
         /// <paramref name="fill"/> 이 null 이면 투명(PNG 로 저장하면 뚫린 채로 남는다).

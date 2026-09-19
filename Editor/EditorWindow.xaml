@@ -73,7 +73,7 @@
                                       ToolTip="남길 영역을 끌어 고르고 Enter 또는 더블클릭 (C) — 아래 줄에서 비율·크기" Click="OnToolClick" Tag="Crop"/>
                         <Rectangle Style="{StaticResource ToolSeparator}"/>
                         <Button x:Name="BtnImageMenu" Style="{StaticResource ToolButton}"
-                                ToolTip="뒤집기 · 회전 · 캔버스 크기" Click="OnImageMenu">
+                                ToolTip="뒤집기 · 회전 · 이미지 크기 조절" Click="OnImageMenu">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="이미지" VerticalAlignment="Center"/>
                                 <Path Style="{StaticResource IconDim}" Data="{StaticResource IconChevron}"

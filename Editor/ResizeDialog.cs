@@ -7,8 +7,8 @@ using System.Windows.Media;
 namespace SnapView.Editor
 {
     /// <summary>
-    /// 캔버스 크기를 새로 정하는 작은 창.
-    /// 기본은 비율 유지 — 한쪽을 고치면 다른 쪽이 따라온다.
+    /// 그림 크기를 새로 정하는 작은 창 — 작은 그림을 크게 늘려 바꿔치기(확대 교체)하거나
+    /// 큰 그림을 줄일 때 쓴다. 기본은 비율 유지 — 한쪽을 고치면 다른 쪽이 따라온다.
     /// </summary>
     public sealed class ResizeDialog : Window
     {
@@ -33,7 +33,7 @@ namespace SnapView.Editor
             ResultWidth = _originalWidth;
             ResultHeight = _originalHeight;
 
-            Title = "캔버스 크기";
+            Title = "이미지 크기 조절";
             SizeToContent = SizeToContent.WidthAndHeight;
             ResizeMode = ResizeMode.NoResize;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;

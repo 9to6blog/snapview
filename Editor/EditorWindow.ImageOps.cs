@@ -144,7 +144,7 @@ namespace SnapView.Editor
             Add("오른쪽으로 90도 (Ctrl+R)", () => Rotate(true));
             Add("왼쪽으로 90도 (Ctrl+Shift+R)", () => Rotate(false));
             menu.Items.Add(new Separator());
-            Add("캔버스 크기...", () => OnResizeCanvas(this, new RoutedEventArgs()));
+            Add("이미지 크기 조절(확대·축소)...", () => OnResizeCanvas(this, new RoutedEventArgs()));
             Add("캔버스 여백 늘리기...", ExpandCanvas);
 
             menu.IsOpen = true;
@@ -248,7 +248,11 @@ namespace SnapView.Editor
             StHint.Text = $"여백을 붙여 {(int)Canvas1.ImageWidth}×{(int)Canvas1.ImageHeight} 가 됐습니다";
         }
 
-        /// <summary>캔버스 크기를 바꾼다. 주석도 같은 비율로 따라간다.</summary>
+        /// <summary>
+        /// 그림 자체를 늘리거나 줄인다(확대 교체). 주석도 같은 비율로 따라간다.
+        /// 캔버스 크기... 가 이 일을 한다 — 예전 설명은 "캔버스" 라고만 적혀 있어
+        /// 그림이 늘어나는지 공간이 늘어나는지 알 수 없었다.
+        /// </summary>
         private void OnResizeCanvas(object sender, RoutedEventArgs e)
         {
             CommitText();

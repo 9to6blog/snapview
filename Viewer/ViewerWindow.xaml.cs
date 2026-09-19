@@ -95,6 +95,9 @@ namespace SnapView.Viewer
 
         private int _rotation;              // 0 / 90 / 180 / 270
         private bool _flipH, _flipV;
+        // 크기 조절(확대 교체) 결과 — 파일은 저장할 때만 바뀐다. 회전·뒤집기와 같은 취급.
+        private double _pendingScale = 1.0;
+        private BitmapScalingMode _pendingScaling = BitmapScalingMode.HighQuality;
         private double _originX, _originY;  // Stage 안에서 표시 내용의 좌상단(DIP)
         private FitMode? _activeFit;        // null 이면 사용자가 직접 맞춘 상태
 
@@ -1077,6 +1080,8 @@ namespace SnapView.Viewer
         {
             _rotation = 0;
             _flipH = _flipV = false;
+            _pendingScale = 1.0;
+            _pendingScaling = BitmapScalingMode.HighQuality;
         }
 
         /// <summary>한 번만 쓰고 버린다 — 폴더를 넘긴 뒤 돌아왔을 때는 파일에서 읽는다.</summary>
@@ -1409,6 +1414,11 @@ namespace SnapView.Viewer
             if (_rotation != 0) extra.Add(_rotation.ToString(CultureInfo.InvariantCulture) + "° 회전");
             if (_flipH) extra.Add("좌우 뒤집음");
             if (_flipV) extra.Add("상하 뒤집음");
+            if (_pendingScale != 1.0)
+                extra.Add("크기 " +
+                    ((int)Math.Round(ImgW * _pendingScale)).ToString(CultureInfo.InvariantCulture) + "×" +
+                    ((int)Math.Round(ImgH * _pendingScale)).ToString(CultureInfo.InvariantCulture) +
+                    (_pendingScaling == BitmapScalingMode.NearestNeighbor ? " (픽셀 보존)" : ""));
 
             StZoom.Text = extra.Count > 0 ? pct + "   ·   " + string.Join(" · ", extra) : pct;
             BtnZoomLabel.Content = pct;
@@ -1602,6 +1612,7 @@ namespace SnapView.Viewer
                 case Key.R: Rotate(shift ? -90 : 90); break;
                 case Key.H: Flip(horizontal: true); break;
                 case Key.V when !ctrl: Flip(horizontal: false); break;
+                case Key.D when !ctrl: ResizeImage(); break;
 
                 case Key.G: SetStripVisible(StripPanel.Visibility != Visibility.Visible, save: true); break;
                 case Key.E when !ctrl: OpenInEditor(); break;
@@ -1655,7 +1666,14 @@ namespace SnapView.Viewer
         private BitmapSource? CurrentAsShown()
         {
             if (_image == null) return null;
-            if (_rotation == 0 && !_flipH && !_flipV) return _image;
+            if (_rotation == 0 && !_flipH && !_flipV && _pendingScale == 1.0) return _image;
+
+            BitmapSource src = _image;
+            if (_pendingScale != 1.0)
+                src = AnnotationRenderer.Resize(src,
+                    Math.Max(1, (int)Math.Round(ImgW * _pendingScale)),
+                    Math.Max(1, (int)Math.Round(ImgH * _pendingScale)),
+                    _pendingScaling);
 
             var tg = new TransformGroup();
             if (_flipH || _flipV)
@@ -1663,10 +1681,53 @@ namespace SnapView.Viewer
             if (_rotation != 0)
                 tg.Children.Add(new RotateTransform(_rotation));
 
-            var t = new TransformedBitmap(_image, tg);
+            var t = new TransformedBitmap(src, tg);
             t.Freeze();
             return t;
         }
+
+        /// <summary>
+        /// 그림을 늘리거나 줄여 <b>바꿔치기</b>한다 — 작은 그림을 크게 확대해
+        /// 그 자리의 파일로 다시 저장하는 흐름. 화면 배율(줌)과 달리 픽셀 자체가
+        /// 바뀌며, 회전·뒤집기처럼 저장(Ctrl+S)·다른 이름·복사·편집으로 열 때 적용된다.
+        /// 지금 뷰어에 떠 있는 것은 원본 그대로이므로 되돌리려면 다시 D 를 눌러
+        /// 100% 로 맞추면 된다.
+        /// </summary>
+        private void ResizeImage()
+        {
+            if (_image == null || _isVideo) return;
+
+            int curW = Math.Max(1, (int)Math.Round(ImgW * _pendingScale));
+            int curH = Math.Max(1, (int)Math.Round(ImgH * _pendingScale));
+
+            var dialog = new SnapView.Editor.ResizeDialog(curW, curH) { Owner = this };
+            if (dialog.ShowDialog() != true) return;
+            if (dialog.ResultWidth < 1 || dialog.ResultHeight < 1) return;
+
+            double scaleX = (double)dialog.ResultWidth / ImgW;
+            double scaleY = (double)dialog.ResultHeight / ImgH;
+            if (Math.Abs(scaleX - 1.0) < 1e-9 && Math.Abs(scaleY - 1.0) < 1e-9)
+            {
+                _pendingScale = 1.0;
+                UpdateChrome();
+                StBytes.Text = "원래 크기로 돌렸습니다";
+                return;
+            }
+
+            _pendingScale = scaleX;
+            // 도트·UI 캡처를 정수 배로 키울 때는 픽셀이 뭉개지면 안 된다.
+            bool integerUp = scaleX >= 2.0 &&
+                             Math.Abs(scaleX - Math.Round(scaleX)) < 1e-9 &&
+                             Math.Abs(scaleY - Math.Round(scaleY)) < 1e-9;
+            _pendingScaling = integerUp ? BitmapScalingMode.NearestNeighbor
+                                        : BitmapScalingMode.HighQuality;
+
+            UpdateChrome();
+            StBytes.Text = $"크기 조절 예정: {ImgW:0}×{ImgH:0} → {dialog.ResultWidth}×{dialog.ResultHeight}" +
+                           (integerUp ? " (픽셀 보존)" : "") + " — Ctrl+S 로 저장";
+        }
+
+        private void OnResizeImage(object sender, RoutedEventArgs e) => ResizeImage();
 
         private void OpenInEditor()
         {
@@ -1683,8 +1744,8 @@ namespace SnapView.Viewer
             if (img != null) ImageIO.CopyToClipboard(img);
         }
 
-        /// <summary>돌리거나 뒤집은 상태가 아직 파일에 안 들어갔는가.</summary>
-        private bool HasUnsavedTransform => _rotation != 0 || _flipH || _flipV;
+        /// <summary>돌리거나 뒤집거나 크기를 바꾼 상태가 아직 파일에 안 들어갔는가.</summary>
+        private bool HasUnsavedTransform => _rotation != 0 || _flipH || _flipV || _pendingScale != 1.0;
 
         /// <summary>
         /// 지금 보이는 그대로 <b>원래 파일에</b> 덮어쓴다.

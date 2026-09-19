@@ -133,6 +133,17 @@ internal static partial class SelfTest
               ro.X == 0 && ro.Y == 0 && ro.Width == 100 && ro.Height == 60,
               $"{ro.X},{ro.Y} {ro.Width}x{ro.Height}");
 
+        // --- 크기 조절(확대 교체) --- src 는 100×60, 왼쪽 절반이 흰색
+        BitmapSource up2x = AnnotationRenderer.Resize(src, 200, 120, BitmapScalingMode.NearestNeighbor);
+        Check("정수 배 확대는 크기가 정확함", up2x.PixelWidth == 200 && up2x.PixelHeight == 120);
+        Check("정수 배 확대는 픽셀이 뭉개지지 않음(가장자리가 정확히 반반)",
+              SamplePixel(up2x, 0, 60)[0] == 255 && SamplePixel(up2x, 99, 60)[0] == 255 &&
+              SamplePixel(up2x, 100, 60)[0] == 0 && SamplePixel(up2x, 199, 60)[0] == 0,
+              $"x99={SamplePixel(up2x, 99, 60)[0]} x100={SamplePixel(up2x, 100, 60)[0]}");
+
+        BitmapSource down = AnnotationRenderer.Resize(src, 50, 30, BitmapScalingMode.HighQuality);
+        Check("축소는 크기만 맞으면 됨", down.PixelWidth == 50 && down.PixelHeight == 30);
+
         // 실제로 자르고 주석이 따라 옮겨지는지
         var cropped = new CroppedBitmap(src, r);
         cropped.Freeze();

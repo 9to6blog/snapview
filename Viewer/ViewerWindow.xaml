@@ -115,6 +115,9 @@
                         ToolTip="돌리거나 뒤집은 그대로 원래 파일에 덮어쓰기 (Ctrl+S)" Click="OnSave"/>
                 <Button x:Name="BtnSaveAs" Style="{StaticResource ToolButton}" Content="다른 이름"
                         ToolTip="다른 이름으로 저장 (Ctrl+Shift+S)" Click="OnSaveAs"/>
+                <Button x:Name="BtnUpscale" Style="{StaticResource ToolButton}" Content="크기 조절"
+                        ToolTip="그림을 늘리거나 줄여 바꿔치기 (D). 파일은 저장(Ctrl+S)할 때 바뀝니다" Click="OnResizeImage"/>
+
                 <Button Style="{StaticResource ToolButton}" Content="열기"
                         ToolTip="이미지 열기 (Ctrl+O)" Click="OnOpen"/>
                 <Button x:Name="BtnFolder" Style="{StaticResource ToolButton}" Content="폴더"
@@ -317,6 +320,7 @@
             <Grid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="주석 편집기로 열기" Click="OnEdit"/>
+                    <MenuItem Header="크기 조절(확대 교체)... (D)" Click="OnResizeImage"/>
                 </ContextMenu>
             </Grid.ContextMenu>
             <Canvas x:Name="Surface">
