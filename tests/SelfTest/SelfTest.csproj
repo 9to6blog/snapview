@@ -1,0 +1,82 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Tests.Capture.cs" />
+    <Compile Include="Tests.HotKeys.cs" />
+    <Compile Include="Tests.Placement.cs" />
+    <Compile Include="Tests.EditorStyle.cs" />
+    <Compile Include="Tests.ShapesTools.cs" />
+    <Compile Include="Tests.ProTools.cs" />
+    <Compile Include="Tests.Transform.cs" />
+    <Compile Include="Tests.Gif.cs" />
+    <Compile Include="Tests.Mp4.cs" />
+    <Compile Include="Tests.VideoEdit.cs" />
+    <Compile Include="Tests.VideoInfo.cs" />
+    <Compile Include="Tests.PlayerKeys.cs" />
+    <Compile Include="Tests.Formats.cs" />
+    <Compile Include="Tests.Audio.cs" />
+    <Compile Include="Tests.Editing.cs" />
+    <Compile Include="Tests.Installer.cs" />
+    <Compile Include="Tests.Sound.cs" />
+    <Compile Include="Tests.EditorModel.cs" />
+    <Compile Include="Tests.EditorLogic.cs" />
+    <!-- 본체 소스를 그대로 링크한다. 창 클래스(XAML)만 빼면 GUI 없이 콘솔로 돌아간다. -->
+    <Compile Include="..\..\Native\*.cs" />
+    <Compile Include="..\..\Core\HotKeySpec.cs" />
+    <Compile Include="..\..\Core\MediaKinds.cs" />
+    <Compile Include="..\..\Core\LaunchRequest.cs" />
+    <Compile Include="..\..\Core\CropBoundaryAnalysis.cs" />
+    <Compile Include="..\..\Core\AppData.cs" />
+    <Compile Include="..\..\Core\ImageIO.cs" />
+    <Compile Include="..\..\Core\VideoInfo.cs" />
+    <Compile Include="..\..\Core\Settings.cs" />
+    <Compile Include="..\..\Core\RecordingNames.cs" />
+    <Compile Include="..\..\Core\Log.cs" />
+    <Compile Include="..\..\Core\ViewMath.cs" />
+    <Compile Include="..\..\Core\ImageEffects.cs" />
+    <Compile Include="..\..\Core\Annotations.cs" />
+    <Compile Include="..\..\Core\MaskShapes.cs" />
+    <Compile Include="..\..\Core\RecoveryStore.cs" />
+    <Compile Include="..\..\Core\WindowMemory.cs" />
+    <Compile Include="..\..\Core\RecentColors.cs" />
+    <Compile Include="..\..\Core\UndoStack.cs" />
+    <Compile Include="..\..\Core\EditorMath.cs" />
+    <Compile Include="..\..\Core\EditorRules.cs" />
+    <Compile Include="..\..\Core\EditorKeyMap.cs" />
+    <Compile Include="..\..\Core\ArrangeTools.cs" />
+    <Compile Include="..\..\Core\ProjectFile.cs" />
+    <Compile Include="..\..\Core\SelectionTools.cs" />
+    <Compile Include="..\..\Core\ShapeGeometry.cs" />
+    <Compile Include="..\..\Core\ImageAnnotation.cs" />
+    <Compile Include="..\..\Core\EraseAnnotation.cs" />
+    <Compile Include="..\..\Core\GifWriter.cs" />
+    <Compile Include="..\..\Capture\Mp4Writer.cs" />
+    <Compile Include="..\..\Capture\VideoEditor.cs" />
+    <Compile Include="..\..\Capture\ScreenRecorder.cs" />
+    <Compile Include="..\..\Capture\AudioConvert.cs" />
+    <Compile Include="..\..\Capture\AudioResampler.cs" />
+    <Compile Include="..\..\Core\SystemHotKeys.cs" />
+    <Compile Include="..\..\Core\Elevation.cs" />
+    <Compile Include="..\..\Core\CaptureSound.cs" />
+    <Compile Include="..\..\Core\RecordSound.cs" />
+    <Compile Include="..\..\Core\FileAssociation.cs" />
+    <Compile Include="..\..\Prefs\HotKeyBox.cs" />
+    <Compile Include="..\..\Editor\ColorPicker.cs" />
+    <!-- 설치기의 안전 판정도 같은 방식으로 검사한다 -->
+    <Compile Include="..\..\installer\Installer.cs" />
+    <Compile Include="..\..\installer\Shortcut.cs" />
+    <Compile Include="..\..\installer\NativeHelpers.cs" />
+  </ItemGroup>
+</Project>

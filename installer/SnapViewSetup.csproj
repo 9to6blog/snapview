@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>SnapView-Setup</AssemblyName>
+    <RootNamespace>SnapViewSetup</RootNamespace>
+    <ApplicationIcon>..\assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <Product>SnapView</Product>
+    <AssemblyTitle>SnapView 설치</AssemblyTitle>
+    <Company>9to6blog</Company>
+    <LangVersion>latest</LangVersion>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <DebugType>embedded</DebugType>
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 파일 연결은 본체와 같은 코드를 쓴다. 따로 구현하면 확장자 목록이 갈라진다. -->
+    <Compile Include="..\Core\FileAssociation.cs" Link="Shared\FileAssociation.cs" />
+    <Compile Include="..\Core\MediaKinds.cs" Link="Shared\MediaKinds.cs" />
+    <Compile Include="..\Core\Log.cs" Link="Shared\Log.cs" />
+    <Compile Include="..\Core\Settings.cs" Link="Shared\Settings.cs" />
+    <Compile Include="..\Core\RecordingNames.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\assets\app.ico" Link="assets\app.ico" />
+    <!-- SnapView 본체를 설치기 안에 품는다. build.bat installer 가 먼저 publish 한다. -->
+    <EmbeddedResource Include="..\dist\SnapView.exe" LogicalName="SnapView.exe" />
+
+  </ItemGroup>
+
+</Project>
