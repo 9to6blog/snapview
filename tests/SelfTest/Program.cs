@@ -31,6 +31,12 @@ internal static partial class SelfTest
 
         try
         {
+            if (Array.IndexOf(args, "--capture-input") >= 0)
+            {
+                TestCaptureAltTab();
+                Console.WriteLine($"\n결과: 통과 {_pass}, 실패 {_fail}");
+                return _fail == 0 ? 0 : 1;
+            }
             if (Array.IndexOf(args, "--editor") >= 0)
             {
                 TestEditorRegressions(tmp);
@@ -45,6 +51,7 @@ internal static partial class SelfTest
             }
             TestEditorRegressions(tmp);
             TestHotKeys();
+            TestCaptureAltTab();
             TestLaunchRequest(tmp);
             TestPrintScreenChain();
             TestElevation();

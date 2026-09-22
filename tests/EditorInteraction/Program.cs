@@ -136,6 +136,95 @@ static class Program
         return w;
     }
 
+    static Point[] EditHandles(Window w, object a) => (Point[])Call(Canvas(w), "EditHandles", a)!;
+    static bool Near(Point a, Point b) => (a - b).Length < 0.001;
+    static bool Near(double a, double b) => Math.Abs(a - b) < 0.001;
+
+    static void TestNumberArrowEditing(string folder, string? preview)
+    {
+        var w = Editor(folder); Select(w, "NumberArrow");
+        Drag(w, new Point(180, 180), new Point(350, 250));
+        object arrow = Items(w)[0]!;
+        Point center = PointOf(arrow, "Center"), tip = PointOf(arrow, "Tip");
+        Drag(w, tip, tip + new Vector(60, -25)); tip += new Vector(60, -25);
+        Check("registered tip moves immediately with number-arrow tool", Items(w).Count == 1 && PointOf(arrow, "Tip") == tip && PointOf(arrow, "Center") == center);
+        Drag(w, center, center + new Vector(-35, 25)); center += new Vector(-35, 25);
+        Check("registered number position moves independently", PointOf(arrow, "Center") == center && PointOf(arrow, "Tip") == tip);
+        Point body = center + (tip - center) * 0.5;
+        Vector move = new Vector(24, 32);
+        Drag(w, body, body + move); center += move; tip += move;
+        Check("dragging shaft moves the whole arrow without adding a layer", Items(w).Count == 1 && PointOf(arrow, "Tip") == tip && PointOf(arrow, "Center") == center);
+        Call(w, "SetSelection", new object?[] { null });
+        Drag(w, tip, tip + new Vector(12, 5)); tip += new Vector(12, 5);
+        Check("unselected arrow tip also edits on the first drag", Items(w).Count == 1 && PointOf(arrow, "Tip") == tip);
+        Select(w, "Select");
+        Drag(w, tip, tip + new Vector(-12, -5)); tip += new Vector(-12, -5);
+        Check("selection tool keeps independent tip editing", PointOf(arrow, "Tip") == tip && PointOf(arrow, "Center") == center);
+
+        Select(w, "NumberArrow"); Call(w, "SetSelection", arrow);
+        for (int handle = 2; handle < 6; handle++)
+        {
+            Point oldCenter = PointOf(arrow, "Center"), oldTip = PointOf(arrow, "Tip");
+            double oldRadius = (double)Prop(arrow, "Radius")!, oldThickness = (double)Prop(arrow, "Thickness")!;
+            Rect bounds = (Rect)Prop(arrow, "Bounds")!;
+            Point[] corners = { bounds.TopLeft, bounds.TopRight, bounds.BottomRight, bounds.BottomLeft };
+            Point anchor = corners[(handle - 2 + 2) % 4];
+            Vector diagonal = corners[handle - 2] - anchor;
+            Point grab = EditHandles(w, arrow)[handle];
+            double factor = handle % 2 == 0 ? 1.4 : 0.75;
+            Down(w, grab);
+            Move(w, grab + diagonal * 0.1);
+            Move(w, grab + diagonal * (factor - 1));
+            Up(w, grab + diagonal * (factor - 1));
+            Check($"corner {handle} scales both positions around the opposite corner", Near(PointOf(arrow, "Center"), anchor + (oldCenter - anchor) * factor) && Near(PointOf(arrow, "Tip"), anchor + (oldTip - anchor) * factor));
+            Check($"corner {handle} scales number, shaft and arrowhead together", Near((double)Prop(arrow, "Radius")!, oldRadius * factor) && Near((double)Prop(arrow, "Thickness")!, oldThickness * factor));
+            Call(w, "Undo"); arrow = Items(w)[0]!;
+            Check($"corner {handle} is one undo step", Near(PointOf(arrow, "Center"), oldCenter) && Near((double)Prop(arrow, "Radius")!, oldRadius));
+            Call(w, "Redo"); arrow = Items(w)[0]!;
+            Check($"corner {handle} redo preserves scaled size", Near((double)Prop(arrow, "Radius")!, oldRadius * factor));
+            Call(w, "SetSelection", arrow);
+        }
+        Call(w, "SaveResult", false);
+        foreach (Point handle in EditHandles(w, arrow)) { Down(w, handle); Up(w, handle); }
+        Check("clicking any handle without dragging keeps saved document clean", !(bool)Field(w, "_dirty")!);
+        int count = Items(w).Count;
+        Drag(w, new Point(640, 350), new Point(720, 420));
+        Check("blank-area drag still creates the next numbered arrow", Items(w).Count == count + 1 && (int)Field(w, "_counter")! == 3);
+
+        // Handle padding is measured in screen pixels, even when zoomed out.
+        arrow = Items(w)[1]!;
+        foreach (double zoom in new[] { 0.4, 1.0, 2.5 })
+        {
+            Set(Canvas(w), "Scale", zoom);
+            Rect b = (Rect)Prop(arrow, "Bounds")!;
+            Point[] handles = EditHandles(w, arrow);
+            Check($"resize corners stay separated from endpoints at {zoom} zoom", Near((b.Left - handles[2].X) * zoom, 20) && (handles[4] - handles[0]).Length * zoom >= 20);
+        }
+        Set(Canvas(w), "Scale", 1.0);
+        Set(arrow, "Center", new Point(20, 80)); Set(arrow, "Tip", new Point(190, 135));
+        Point marginHandle = EditHandles(w, arrow)[2];
+        double beforeRadius = (double)Prop(arrow, "Radius")!;
+        Down(w, marginHandle, inside: false); Up(w, marginHandle + new Vector(-30, -20));
+        Check("resize handle in image margin remains usable with release-only movement", (double)Prop(arrow, "Radius")! > beforeRadius);
+        Select(w, "Select"); Call(w, "SetSelection", arrow);
+        Point selectCorner = EditHandles(w, arrow)[4]; beforeRadius = (double)Prop(arrow, "Radius")!;
+        Drag(w, selectCorner, selectCorner + new Vector(30, 20));
+        Check("selection tool supports the same whole-arrow resizing", (double)Prop(arrow, "Radius")! > beforeRadius);
+        Call(w, "SetSelection", Items(w)[0]);
+        Call(w, "HideSavedToast");
+        Call(w, "Relayout");
+        if (preview != null) RenderPreview(w, preview);
+    }
+
+    static void RenderPreview(Window w, string path)
+    {
+        var root = (FrameworkElement)w.Content; root.UpdateLayout();
+        var bitmap = new RenderTargetBitmap((int)root.ActualWidth, (int)root.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(root);
+        var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
+        using var stream = File.Create(path); png.Save(stream);
+    }
+
     static void Pump(TimeSpan duration)
     {
         var frame = new DispatcherFrame();
@@ -189,6 +278,7 @@ static class Program
             }
             Directory.CreateDirectory(tmp);
             TestNumberArrows(Path.Combine(tmp, "arrows"));
+            TestNumberArrowEditing(Path.Combine(tmp, "arrow-edits"), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
             Window w = TestMagnifiers(Path.Combine(tmp, "magnifiers"));
             TestToast(w, args.Length > 0 ? Path.GetFullPath(args[0]) : null);
             Console.WriteLine($"RESULT: {passed} interaction checks passed"); return 0;

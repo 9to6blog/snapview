@@ -116,6 +116,7 @@ namespace SnapView.Capture
         private WindowCandidate? _hover;
         private IntPtr _pickedWindow = IntPtr.Zero;
         private volatile CropBoundaryAnalysis? _boundaryAnalysis;
+        private readonly KeyboardHook _captureKeys = new();
 
         /// <summary>확정된 결과. 취소하면 null.</summary>
         internal OverlayResult? Result { get; private set; }
@@ -299,6 +300,7 @@ namespace SnapView.Capture
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
+            _captureKeys.BlockAltTab = true;
 
             // WPF 의 DIP 배치를 거치지 않고 물리 픽셀로 직접 가상 화면 전체를 덮는다.
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
@@ -322,6 +324,13 @@ namespace SnapView.Capture
 
             // 마우스를 움직이기 전에도 안내선이 보이도록 지금 커서 자리에 한 번 그려 둔다.
             UpdateCrosshair(Mouse.GetPosition(Root));
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            // 저장·편집·복사·확인·취소 모두 같은 닫힘 경로에서 즉시 해제한다.
+            _captureKeys.Dispose();
+            base.OnClosed(e);
         }
 
         private void UpdateHint()

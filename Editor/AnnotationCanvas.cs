@@ -208,7 +208,8 @@ namespace SnapView.Editor
             Rect b = a.Bounds;
             if (b.IsEmpty) return;
 
-            b.Inflate(Math.Max(4, a.Thickness), Math.Max(4, a.Thickness));
+            if (a is NumberArrowAnnotation) b = NumberArrowEditBounds(a);
+            else b.Inflate(Math.Max(4, a.Thickness), Math.Max(4, a.Thickness));
 
             bool rot = PushRotation(dc, a);
 
@@ -235,19 +236,38 @@ namespace SnapView.Editor
             return m.Transform(local);
         }
 
+        private Rect NumberArrowEditBounds(Annotation a)
+        {
+            Rect b = a.Bounds;
+            // Separate corner handles from the tip at every zoom level.
+            b.Inflate(ToImageLength(20), ToImageLength(20));
+            return b;
+        }
+
+        internal IReadOnlyList<Point> EditHandles(Annotation a)
+        {
+            if (a is not NumberArrowAnnotation arrow) return a.Handles();
+            Rect b = NumberArrowEditBounds(a);
+            return new[] { arrow.Tip, arrow.Center, b.TopLeft, b.TopRight, b.BottomRight, b.BottomLeft };
+        }
+
         private void DrawHandles(DrawingContext dc, Annotation a)
         {
-            IReadOnlyList<Point> points = a.Handles();
+            IReadOnlyList<Point> points = EditHandles(a);
             bool rot = PushRotation(dc, a);
 
             double size = 9 / _scale;          // 화면에서 늘 같은 크기로 보이게
             var edge = new Pen(new SolidColorBrush(AccentColor), 1 / _scale);
             edge.Freeze();
 
-            foreach (Point p in points)
+            for (int i = 0; i < points.Count; i++)
             {
-                dc.DrawRectangle(Brushes.White, edge,
-                    new Rect(p.X - size / 2, p.Y - size / 2, size, size));
+                Point p = points[i];
+                if (a is NumberArrowAnnotation && i < 2)
+                    dc.DrawEllipse(Brushes.White, edge, p, size / 2, size / 2);
+                else
+                    dc.DrawRectangle(Brushes.White, edge,
+                        new Rect(p.X - size / 2, p.Y - size / 2, size, size));
             }
 
             // 회전 손잡이: 위쪽 가운데에서 떨어진 동그라미. 끌면 도형이 돈다.

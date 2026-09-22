@@ -33,6 +33,8 @@ namespace SnapView.Native
         internal const int WM_SYSKEYUP = 0x0105;
 
         internal const int VK_SHIFT = 0x10;
+        internal const uint VK_TAB = 0x09;
+        internal const uint LLKHF_ALTDOWN = 0x20;
         internal const int VK_CONTROL = 0x11;
         internal const int VK_MENU = 0x12;      // Alt
         internal const int VK_LWIN = 0x5B;

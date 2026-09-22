@@ -711,6 +711,8 @@ namespace SnapView.Editor
                     : "끌어서 위치·크기를 맞춘 뒤 Enter 로 확정 (ESC 취소)")
                 : Canvas1.SelectedMany.Count > 1
                     ? $"주석 {Canvas1.SelectedMany.Count}개 선택 — 함께 끌어 옮기고 모서리로 함께 크기 조절 · Ctrl+D 복제 · Delete 삭제"
+                    : Canvas1.Selected is NumberArrowAnnotation
+                        ? "번호·화살촉의 동그란 점은 위치 · 바깥 모서리는 전체 크기 · 몸통은 전체 이동"
                     : shown == 0
                         ? "도구를 고르고 그림 위에 끌어 보세요 (F1 단축키)"
                         : $"주석 {shown}개";

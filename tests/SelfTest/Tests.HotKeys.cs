@@ -9,6 +9,54 @@ using SnapView.Prefs;
 
 internal static partial class SelfTest
 {
+    private static void TestCaptureAltTab()
+    {
+        Section("캡처 Alt+Tab 차단과 해제");
+        using var hook = new SnapView.Native.KeyboardHook();
+        Check("캡처 밖에서는 Alt+Tab 허용", !hook.FilterAltTab(0x09, true, true));
+        hook.BlockAltTab = true;
+        Check("전역 단축키가 없어도 캡처 보호 훅 설치", hook.IsInstalled);
+        Check("일반 Tab은 툴바 탐색에 전달", !hook.FilterAltTab(0x09, true, false));
+        Check("일반 Tab 키업도 전달", !hook.FilterAltTab(0x09, false, false));
+        Check("Alt 드래그의 Alt는 그대로 전달", !hook.FilterAltTab(0x12, true, true));
+        Check("Esc 취소 키는 그대로 전달", !hook.FilterAltTab(0x1B, true, true));
+        Check("저장 키는 그대로 전달", !hook.FilterAltTab(0x53, true, false));
+        Check("Alt+Tab 누름 차단", hook.FilterAltTab(0x09, true, true));
+        Check("Tab 자동 반복도 차단", hook.FilterAltTab(0x09, true, true));
+        Check("Alt를 먼저 떼어도 Tab 반복 차단", hook.FilterAltTab(0x09, true, false));
+        Check("Alt를 먼저 떼어도 Tab 키업 차단", hook.FilterAltTab(0x09, false, false));
+        Check("다음 일반 Tab은 정상 동작", !hook.FilterAltTab(0x09, true, false));
+        Check("누름이 없던 Tab 키업은 통과", !hook.FilterAltTab(0x09, false, true));
+
+        // Exercise the real native callback with LLKHF_ALTDOWN, without sending keys to Windows.
+        IntPtr data = System.Runtime.InteropServices.Marshal.AllocHGlobal(
+            System.Runtime.InteropServices.Marshal.SizeOf<SnapView.Native.NativeMethods.KBDLLHOOKSTRUCT>());
+        try
+        {
+            var key = new SnapView.Native.NativeMethods.KBDLLHOOKSTRUCT { vkCode = 0x09, flags = 0x20 };
+            System.Runtime.InteropServices.Marshal.StructureToPtr(key, data, false);
+            var callback = typeof(SnapView.Native.KeyboardHook).GetMethod("OnKey",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            Check("네이티브 Alt+Tab 이벤트가 실제로 소비됨",
+                (IntPtr)callback.Invoke(hook, new object[] { 0, new IntPtr(0x0104), data })! == new IntPtr(1));
+            key.flags = 0;
+            System.Runtime.InteropServices.Marshal.StructureToPtr(key, data, false);
+            Check("네이티브 Tab 키업도 실제로 소비됨",
+                (IntPtr)callback.Invoke(hook, new object[] { 0, new IntPtr(0x0101), data })! == new IntPtr(1));
+        }
+        finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(data); }
+
+        hook.SetBindings(Array.Empty<SnapView.Native.KeyboardHook.Binding>());
+        Check("캡처 중 단축키가 비어도 보호 유지", hook.IsInstalled);
+        hook.BlockAltTab = false;
+        Check("캡처 보호 해제 시 빈 훅 제거", !hook.IsInstalled);
+        Check("캡처 후 Alt+Tab 즉시 허용", !hook.FilterAltTab(0x09, true, true));
+        hook.BlockAltTab = true;
+        hook.Dispose();
+        Check("오버레이 종료 시 훅 완전 해제", !hook.IsInstalled && !hook.BlockAltTab);
+        Check("종료 뒤 차단 상태가 남지 않음", !hook.FilterAltTab(0x09, true, true));
+    }
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint mods, uint vk);
 

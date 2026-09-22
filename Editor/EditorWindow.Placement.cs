@@ -121,6 +121,7 @@ namespace SnapView.Editor
 
         private void ResetPlacementGestures()
         {
+            ResetNumberArrowEdit();
             _numberArrowPhase = NumberArrowPhase.None;
             _numberArrowDragged = false;
             _dragMagnifier = null;

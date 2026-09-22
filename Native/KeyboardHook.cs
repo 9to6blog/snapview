@@ -43,12 +43,27 @@ namespace SnapView.Native
         private IntPtr _hook = IntPtr.Zero;
         private uint _firedOnDown;      // 눌림에서 이미 발동한 키 (자동 반복 방지)
         private bool _disposed;
+        private bool _blockAltTab;
+        private bool _blockedTabDown;
 
         internal event Action<int>? HotKeyPressed;
 
         internal KeyboardHook() => _proc = OnKey;
 
         internal bool IsInstalled => _hook != IntPtr.Zero;
+
+        /// <summary>캡처 오버레이가 떠 있는 동안만 작업 전환을 막는다.</summary>
+        internal bool BlockAltTab
+        {
+            get => _blockAltTab;
+            set
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                _blockAltTab = value;
+                if (_blockAltTab || _bindings.Count > 0) Install();
+                else Uninstall();
+            }
+        }
 
         /// <summary>이 훅이 맡을 단축키 목록을 갈아 끼운다. 비면 훅을 떼어 낸다.</summary>
         internal void SetBindings(IEnumerable<Binding> bindings)
@@ -57,7 +72,7 @@ namespace SnapView.Native
             foreach (Binding b in bindings)
                 if (b.VirtualKey != 0) _bindings.Add(b);
 
-            if (_bindings.Count == 0) { Uninstall(); return; }
+            if (_bindings.Count == 0 && !_blockAltTab) { Uninstall(); return; }
             Install();
         }
 
@@ -74,6 +89,7 @@ namespace SnapView.Native
             UnhookWindowsHookEx(_hook);
             _hook = IntPtr.Zero;
             _firedOnDown = 0;
+            _blockedTabDown = false;
         }
 
         private IntPtr OnKey(int nCode, IntPtr wParam, IntPtr lParam)
@@ -85,9 +101,12 @@ namespace SnapView.Native
             bool up = msg == WM_KEYUP || msg == WM_SYSKEYUP;
             if (!down && !up) return CallNextHookEx(_hook, nCode, wParam, lParam);
 
-            uint vk;
-            try { vk = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam).vkCode; }
+            KBDLLHOOKSTRUCT key;
+            try { key = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam); }
             catch { return CallNextHookEx(_hook, nCode, wParam, lParam); }
+            uint vk = key.vkCode;
+
+            if (FilterAltTab(vk, down, (key.flags & LLKHF_ALTDOWN) != 0)) return new IntPtr(1);
 
             // 이미 눌림에서 발동한 키의 떼임은 조용히 삼킨다.
             // (PrtScn 은 KEYUP 에서 캡처 도구가 열리는 경로도 있어서 짝을 맞춰 막아야 한다)
@@ -113,6 +132,20 @@ namespace SnapView.Native
 
             Fire(id);
             return new IntPtr(1);   // 뒤로 넘기지 않는다 = 캡처 도구도 못 본다
+        }
+
+        /// <summary>Alt+Tab의 누름·반복·떼임을 한 쌍으로 소비한다. Shift 유무와 무관하다.</summary>
+        internal bool FilterAltTab(uint vk, bool down, bool altDown)
+        {
+            if (vk != VK_TAB) return false;
+            if (down && (_blockedTabDown || (_blockAltTab && altDown)))
+            {
+                _blockedTabDown = true;
+                return true;
+            }
+            // Alt를 먼저 떼어도 이미 막은 Tab의 키업은 함께 소비한다.
+            if (!down && _blockedTabDown) { _blockedTabDown = false; return true; }
+            return false;
         }
 
         /// <summary>지금 눌린 수식키까지 정확히 맞는 단축키의 id. 없으면 0.</summary>
@@ -151,6 +184,7 @@ namespace SnapView.Native
         {
             if (_disposed) return;
             _disposed = true;
+            _blockAltTab = false;
             Uninstall();
         }
     }
