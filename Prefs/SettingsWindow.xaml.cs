@@ -26,6 +26,12 @@ namespace SnapView.Prefs
     /// </summary>
     public partial class SettingsWindow : Window
     {
+        private void OnAiSettings(object sender, RoutedEventArgs e)
+        {
+            try { new AiSettingsWindow { Owner = this }.ShowDialog(); }
+            catch { MessageBox.Show(this, "AI 설정을 읽지 못했습니다. 설정 파일과 접근 권한을 확인해 주세요.", "AI 설정", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        }
+
         private const int ProbeIdBase = 41000;
 
         private readonly Settings _working;

@@ -618,6 +618,7 @@ namespace SnapView.Editor
         /// <summary>Shift+클릭: 선택에 넣었다 뺐다 한다.</summary>
         private void ToggleSelection(Annotation a)
         {
+            _backgroundSelected = false;
             var members = LayerGroups.Members(Canvas1.Items, a);
             if (members.All(Canvas1.SelectedMany.Contains))
             {

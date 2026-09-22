@@ -88,5 +88,17 @@ static partial class Program
         ((ToggleButton)w.FindName("TbRulers")).IsChecked = true; Call(w, "OnRulersToggled", w, new RoutedEventArgs());
         Call(w, "HideSavedToast"); Call(w, "SetSelection", Items(w)[0]); Call(w, "UpdateStatus");
         if (preview != null) RenderPreview(w, preview);
+        Call(w, "Rotate", true); guides = (IList)Prop(Canvas(w), "ManualGuides")!;
+        Check("axis guides rotate with the image", (bool)Prop(guides[0]!, "Horizontal")! && Near((double)Prop(guides[0]!, "Position")!, 300));
+        Check("diagonal guides rotate around image coordinates", Near(PointOf(guides[2]!, "Start"), new Point(430, 100)) && Near(PointOf(guides[2]!, "End"), new Point(30, 400)));
+        Call(w, "Undo"); guides = (IList)Prop(Canvas(w), "ManualGuides")!;
+        Check("rotation undo restores guide geometry", Near(PointOf(guides[2]!, "Start"), new Point(100, 50)));
+        Call(w, "Flip", true); guides = (IList)Prop(Canvas(w), "ManualGuides")!;
+        Check("guides follow image flip", Near((double)Prop(guides[0]!, "Position")!, 500) && Near(PointOf(guides[2]!, "Start"), new Point(700, 50)));
+        Call(w, "Undo");
+        var crop = Annotation("CropAnnotation"); Set(crop, "Start", new Point(50, 20)); Set(crop, "End", new Point(700, 450));
+        Call(w, "ApplyCrop", crop); guides = (IList)Prop(Canvas(w), "ManualGuides")!;
+        Check("guides follow crop origin", Near((double)Prop(guides[0]!, "Position")!, 250) && Near(PointOf(guides[2]!, "Start"), new Point(50, 30)));
+        Call(w, "Undo");
     }
 }

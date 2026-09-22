@@ -715,6 +715,43 @@ IID 와 vtable 슬롯은 추측이 아니라 실제 프로젝션 어셈블리를
 
 ---
 
+## AI 이미지 처리
+
+편집기의 **AI 편집 → 연결 설정** 또는 앱 설정의 **AI 제공사 · 모델 · API 키 설정**에서
+제공사별 키를 저장한다. 캔버스 전체 또는 선택 영역의 실제 전송 이미지를 확인하고
+요청을 입력해 **전송하여 처리**한다. 결과를 미리 본 뒤 **새 레이어로 추가**하면
+원본 배경을 보존하면서 이동·크기 조절·그룹화·실행취소할 수 있다.
+
+2026-09-23 공식 문서 기준으로 다음 API를 연결한다. 모델 ID는 직접 수정할 수 있으나,
+선택한 제공사의 입력·출력 규격에 맞는 이미지 편집 모델이어야 한다.
+
+| 제공사 | 기본 모델 / 처리 | 공식 문서 |
+| --- | --- | --- |
+| OpenAI | `gpt-image-2.5-sunburst` / Images edits | [이미지 생성·편집](https://developers.openai.com/api/docs/guides/image-generation) |
+| Google Gemini | `gemini-3.1-flash-image` / Interactions | [이미지 처리](https://ai.google.dev/gemini-api/docs/image-generation), [REST 규격](https://ai.google.dev/api/interactions-api) |
+| xAI Grok | `grok-imagine-image-2.0` / JSON image edits | [이미지 편집](https://docs.x.ai/developers/model-capabilities/images/editing) |
+| Stability AI | Stable Image Control Structure / 구도 유지 변환 | [API 문서](https://platform.stability.ai/docs/api-reference), [공식 OpenAPI 규격](https://api.stability.ai/v2alpha/openapi) |
+| fal.ai | `fal-ai/nano-banana-2/edit` / `image_urls` 규격 | [편집 모델](https://fal.ai/models/fal-ai/nano-banana-2/edit/api), [큐·취소](https://fal.ai/docs/documentation/model-apis/inference/queue) |
+| Replicate | `black-forest-labs/flux-2-pro` / `input_images` 규격 | [모델](https://replicate.com/black-forest-labs/flux-2-pro), [HTTP API](https://replicate.com/docs/reference/http) |
+| OpenAI 호환 | 사용자 지정 HTTPS 기본 주소와 모델 | multipart `/images/edits`, `data[].b64_json` 또는 `url` 응답 |
+
+- 키는 `%LOCALAPPDATA%\SnapView\ai-settings.json`에 **Windows DPAPI CurrentUser 암호문**으로만 저장한다.
+  제공사와 API 주소에 묶어 다른 제공사·주소에 저장한 키를 재사용하지 않는다. 설정 화면에서도
+  저장한 키를 다시 표시하지 않는다. 주소를 바꾸면 해당 주소의 키를 다시 입력해야 한다.
+- SnapView 중계 서버·분석 서버·별도 파일 업로드 서버가 없다. 입력 이미지는 PNG로 새로 인코딩해
+  요청 본문에 포함하고 원본 파일 경로는 보내지 않는다. 인증 키는 선택한 제공사의 HTTPS 헤더에만 넣는다.
+  응답 이미지 다운로드에는 인증 헤더를 붙이지 않으며, 인증 요청의 리다이렉트와 다른 호스트의
+  작업 조회 주소는 거부한다. 키·프롬프트·응답 전문을 로그, 프로젝트 또는 복구 파일에 기록하지 않는다.
+- API 키와 이미지·프롬프트는 **처리를 위해 선택한 제공사에는 전송**된다. 제공사 요금·보관 정책이
+  적용되며 ChatGPT 등 일반 구독과 별도다. Gemini는 `store=false`, fal.ai는 `sync_mode=true`를
+  지정한다. 이 옵션이 제공사의 모든 내부 보관까지 없애는 것은 아니다.
+- 전송 PNG 최대 10 MB, 결과 최대 32 MB·64 MP. Stability 구조 변환은 각 변 64 px 이상,
+  최대 9,437,184 픽셀, 비율 1:2.5–2.5:1이 필요하다. 모델별 추가 제한은 제공사 정책을 따른다.
+- 요청 대기는 8분으로 제한하고 자동 유료 재시도는 하지 않는다. fal.ai·Replicate는 작업 ID를
+  받은 뒤 취소하면 제공사에도 취소를 요청한다. 이미 접수·실행된 작업은 완료·과금될 수 있다.
+- 외부 API 계약은 모의 HTTP로 검증한다. 실제 유료 호출은 사용자의 키·모델 이용 권한이 필요하며,
+  모든 모델이나 임의의 API 규격을 지원하는 것은 아니다.
+
 ## 빌드
 
 새 Windows 환경에서 도구 설치, 소스 복구, 검사와 배포를 이어 가는 순서는
@@ -727,6 +764,7 @@ build.bat installer    설치 프로그램 (setup\SnapView-Setup.exe)
 build.bat selftest     GUI 없이 자체 검사 실행
 dotnet run --project tests/SelfTest -c Release -- --editor  # 편집기 회귀 검사만 실행
 dotnet run --project tests/EditorInteraction -c Release    # 배치·이동·저장 토스트의 WPF 동작 검사
+dotnet run --project tests/AiIntegration -c Release        # DPAPI·제공사 요청·취소·인증 범위 (실제 API 호출 없음)
 dotnet run --project tests/SelfTest -c Release -- --capture-input  # 캡처 Alt+Tab 차단·해제 검사
 build.bat icon         assets\app.ico 다시 생성
 build.bat clean        빌드 산출물 정리

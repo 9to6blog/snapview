@@ -65,6 +65,7 @@ namespace SnapView.Editor
             // 잘라낸 만큼 원점이 옮겨졌으니 주석도 같이 옮긴다.
             var shift = new Vector(-region.X, -region.Y);
             foreach (Annotation item in Canvas1.Items) item.Move(shift);
+            TransformGuides(p => p + shift, region.Width, region.Height);
 
             Canvas1.Source = _image;
             _fitToWindow = true;
@@ -82,6 +83,7 @@ namespace SnapView.Editor
 
             double w = Canvas1.ImageWidth, h = Canvas1.ImageHeight;
             _image = AnnotationRenderer.FlipImage(_image, horizontal);
+            TransformGuides(p => horizontal ? new Point(w - p.X, p.Y) : new Point(p.X, h - p.Y), w, h);
             foreach (Annotation a in Canvas1.Items)
             {
                 a.Flip(horizontal, w, h);
@@ -112,6 +114,7 @@ namespace SnapView.Editor
             double w = Canvas1.ImageWidth, h = Canvas1.ImageHeight;
             _image = AnnotationRenderer.Rotate90(_image, clockwise);
             foreach (Annotation a in Canvas1.Items) a.Rotate90(clockwise, w, h);
+            TransformGuides(p => clockwise ? new Point(h - p.Y, p.X) : new Point(p.Y, w - p.X), h, w);
 
             _region = Rect.Empty;
             Canvas1.Source = _image;
@@ -214,6 +217,7 @@ namespace SnapView.Editor
             };
             _image = AnnotationRenderer.Expand(_image, l, t, r, b, c);
             foreach (Annotation a in Canvas1.Items) a.Move(new Vector(l, t));
+            TransformGuides(p => p + new Vector(l, t), _image.PixelWidth, _image.PixelHeight);
 
             _region = Rect.Empty;
             Canvas1.Source = _image;
@@ -248,6 +252,7 @@ namespace SnapView.Editor
             _image = AnnotationRenderer.Resize(_image, newW, newH);
             double fx = (double)newW / oldW, fy = (double)newH / oldH;
             foreach (Annotation a in Canvas1.Items) a.Scale(fx, fy);
+            TransformGuides(p => new Point(p.X * fx, p.Y * fy), newW, newH);
 
             _region = Rect.Empty;
             Canvas1.Source = _image;

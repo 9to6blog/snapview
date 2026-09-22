@@ -34,6 +34,7 @@
                     <Button x:Name="BtnResize" Style="{StaticResource EditorAction}" Content="크기" ed:ToolbarIcon.Data="{StaticResource EditResize}" ToolTip="이미지 크기 조절 (확대·축소)" Click="OnResizeCanvas" />
                     <Button x:Name="BtnImageMenu" Style="{StaticResource EditorIconButton}" Content="캔버스 여백" ed:ToolbarIcon.Data="{StaticResource EditCanvas}" ToolTip="캔버스 여백 늘리기" Click="OnExpandCanvas" />
                     <Button x:Name="BtnFilter" Style="{StaticResource EditorAction}" Content="필터" ContentTemplate="{StaticResource EditorMenuContent}" ed:ToolbarIcon.Data="{StaticResource EditFilter}" ToolTip="이미지 전체에 효과 적용" Click="OnFilterMenu" />
+                    <Button x:Name="BtnAiImage" Style="{StaticResource EditorAction}" Content="AI 편집" ed:ToolbarIcon.Data="M 12,2 L 14.5,9.5 L 22,12 L 14.5,14.5 L 12,22 L 9.5,14.5 L 2,12 L 9.5,9.5 Z M 3,1 L 3,5 M 1,3 L 5,3" ToolTip="AI 이미지 처리 · 제공사 직접 연결 · 결과를 새 레이어로 추가" Click="OnAiImage" />
                 </StackPanel>
                 <StackPanel Style="{StaticResource EditorActionGroup}" Margin="0,2,0,2">
                     <Button Style="{StaticResource EditorIconButton}" Content="꾸며서 내보내기" ed:ToolbarIcon.Data="{StaticResource EditExport}" ToolTip="꾸며서 내보내기 · 여백·배경·그림자·워터마크" Click="OnExportDecorated" />

@@ -70,6 +70,9 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,4,20,16">
             <StackPanel>
 
+                <TextBlock Style="{StaticResource Section}" Text="AI 이미지 처리"/>
+                <Button Content="AI 제공사 · 모델 · API 키 설정" Style="{StaticResource ToolButton}" HorizontalAlignment="Left" Click="OnAiSettings"/>
+                <TextBlock Style="{StaticResource Note}" Text="키는 Windows 계정에 묶어 암호화합니다. 편집기의 AI 편집에서 이미지를 보내고 결과를 새 레이어로 받을 수 있습니다."/>
                 <!-- ================= 캡처 ================= -->
                 <TextBlock Style="{StaticResource Section}" Text="캡처하면"/>
                 <CheckBox x:Name="CbSave" Content="파일로 저장"/>

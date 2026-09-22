@@ -33,6 +33,7 @@ namespace SnapView.Editor
                 Point p = Canvas1.ToImage(e.GetPosition(Canvas1));
                 if (TbDiagonalGuide.IsChecked == true)
                 {
+                    if (p.X < 0 || p.Y < 0 || p.X > Canvas1.ImageWidth || p.Y > Canvas1.ImageHeight) return;
                     StartDiagonalGuide(p); ViewportGrid.CaptureMouse(); e.Handled = true; return;
                 }
                 var guide = Canvas1.ManualGuides.LastOrDefault(g => g.DistanceTo(p) <= 5 / Canvas1.Scale);
@@ -184,6 +185,25 @@ namespace SnapView.Editor
         {
             Canvas1.ShowGuideMeasurements = TbGuideMeasurements.IsChecked == true;
             Canvas1.InvalidateVisual();
+        }
+
+        private void TransformGuides(Func<Point, Point> map, double width, double height)
+        {
+            foreach (var guide in Canvas1.ManualGuides.ToArray())
+            {
+                if (guide.Diagonal)
+                {
+                    guide.Start = map(guide.Start); guide.End = map(guide.End);
+                    var line = guide.Line(width, height);
+                    if ((line.End - line.Start).Length < 0.001) Canvas1.ManualGuides.Remove(guide);
+                    continue;
+                }
+                var old = guide.Line(Canvas1.ImageWidth, Canvas1.ImageHeight);
+                Point a = map(old.Start), b = map(old.End);
+                guide.Horizontal = Math.Abs(a.Y - b.Y) < 0.001;
+                guide.Position = guide.Horizontal ? a.Y : a.X;
+                if (guide.Position < 0 || guide.Position > (guide.Horizontal ? height : width)) Canvas1.ManualGuides.Remove(guide);
+            }
         }
 
         private void RestoreGuides(System.Collections.Generic.IEnumerable<EditorGuide>? guides)

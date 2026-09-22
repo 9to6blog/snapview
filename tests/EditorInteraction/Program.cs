@@ -220,7 +220,14 @@ static partial class Program
     {
         var root = (FrameworkElement)w.Content; root.UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)root.ActualWidth, (int)root.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(root);
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            var bounds = new Rect(0, 0, root.ActualWidth, root.ActualHeight);
+            dc.DrawRectangle(w.Background, null, bounds);
+            dc.DrawRectangle(new VisualBrush(root), null, bounds);
+        }
+        bitmap.Render(visual);
         var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(path); png.Save(stream);
     }
@@ -280,6 +287,7 @@ static partial class Program
             TestNumberArrows(Path.Combine(tmp, "arrows"));
             TestNumberArrowEditing(Path.Combine(tmp, "arrow-edits"), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
             TestGroupsAndGuides(Path.Combine(tmp, "groups-guides"), args.Length > 2 ? Path.GetFullPath(args[2]) : null);
+            TestAiDialogs(Path.Combine(tmp, "ai"), args.Length > 3 ? Path.GetFullPath(args[3]) : null);
             Window w = TestMagnifiers(Path.Combine(tmp, "magnifiers"));
             TestToast(w, args.Length > 0 ? Path.GetFullPath(args[0]) : null);
             Console.WriteLine($"RESULT: {passed} interaction checks passed"); return 0;

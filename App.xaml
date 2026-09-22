@@ -380,6 +380,11 @@
                                                   Content="{TemplateBinding SelectionBoxItem}"
                                                   ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
 
+                                <TextBox x:Name="PART_EditableTextBox" Visibility="Collapsed"
+                                         Margin="9,0,28,0" Padding="0" BorderThickness="0" Background="Transparent"
+                                         VerticalContentAlignment="Center" VerticalAlignment="Center"
+                                         IsReadOnly="{TemplateBinding IsReadOnly}" Focusable="True"/>
+
                                 <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False"
                                        Placement="Bottom" PopupAnimation="Fade"
                                        IsOpen="{TemplateBinding IsDropDownOpen}">
@@ -395,6 +400,10 @@
                                 </Popup>
                             </Grid>
                             <ControlTemplate.Triggers>
+                                <Trigger Property="IsEditable" Value="True">
+                                    <Setter TargetName="Selection" Property="Visibility" Value="Collapsed"/>
+                                    <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                                </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.45"/>
                                 </Trigger>

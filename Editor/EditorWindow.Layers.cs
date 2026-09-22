@@ -336,6 +336,7 @@ namespace SnapView.Editor
         private void SelectAllAnnotations()
         {
             ConfirmActive();
+            _backgroundSelected = false;
             SelectTool(ToolKind.Select);
             Canvas1.SelectedMany.Clear();
             foreach (Annotation a in Canvas1.Items)

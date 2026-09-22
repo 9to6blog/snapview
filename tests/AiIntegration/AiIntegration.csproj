@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable><ImplicitUsings>disable</ImplicitUsings><PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Core/AiProfiles.cs" Link="Core/AiProfiles.cs"/>
+    <Compile Include="../../Core/AiImageClient.cs" Link="Core/AiImageClient.cs"/>
+  </ItemGroup>
+</Project>
