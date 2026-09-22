@@ -253,9 +253,14 @@ namespace SnapView.Core
             c.DashPattern = DashPattern;
             c.Name = Name;
             c.Locked = Locked;
+            c.GroupId = GroupId;
+            c.GroupName = GroupName;
             c.Blend = Blend;
             return c;
         }
+
+        internal string? GroupId { get; set; }
+        internal string? GroupName { get; set; }
 
         /// <summary>타입별 복제 몸통. 자기 필드만 옮기면 된다.</summary>
         protected abstract Annotation CloneCore();

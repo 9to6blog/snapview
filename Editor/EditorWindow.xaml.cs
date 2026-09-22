@@ -609,22 +609,24 @@ namespace SnapView.Editor
         /// <summary>선택을 이것 하나로 바꾼다. null 이면 전부 푼다.</summary>
         private void SetSelection(Annotation? primary)
         {
+            _backgroundSelected = false;
             Canvas1.SelectedMany.Clear();
             Canvas1.Selected = primary;
-            if (primary != null) Canvas1.SelectedMany.Add(primary);
+            if (primary != null) Canvas1.SelectedMany.AddRange(LayerGroups.Members(Canvas1.Items, primary));
         }
 
         /// <summary>Shift+클릭: 선택에 넣었다 뺐다 한다.</summary>
         private void ToggleSelection(Annotation a)
         {
-            if (Canvas1.SelectedMany.Remove(a))
+            var members = LayerGroups.Members(Canvas1.Items, a);
+            if (members.All(Canvas1.SelectedMany.Contains))
             {
-                if (ReferenceEquals(Canvas1.Selected, a))
-                    Canvas1.Selected = Canvas1.SelectedMany.Count > 0 ? Canvas1.SelectedMany[^1] : null;
+                foreach (Annotation m in members) Canvas1.SelectedMany.Remove(m);
+                Canvas1.Selected = Canvas1.SelectedMany.Count > 0 ? Canvas1.SelectedMany[^1] : null;
             }
             else
             {
-                Canvas1.SelectedMany.Add(a);
+                foreach (Annotation m in members) if (!Canvas1.SelectedMany.Contains(m)) Canvas1.SelectedMany.Add(m);
                 Canvas1.Selected = a;
             }
         }
@@ -729,8 +731,8 @@ namespace SnapView.Editor
             BtnUndo.IsEnabled = _undoStack.CanUndo;
             BtnRedo.IsEnabled = _undoStack.CanRedo;
 
-            LayerTitle.Text = shown == 0 ? "레이어" : $"레이어 ({shown})";
-            LayerEmpty.Visibility = shown == 0 ? Visibility.Visible : Visibility.Collapsed;
+            LayerTitle.Text = $"레이어 ({shown + 1})";
+            LayerEmpty.Visibility = Visibility.Collapsed;
         }
 
         /// <summary>

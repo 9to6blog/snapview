@@ -93,9 +93,9 @@ namespace SnapView.Editor
         /// <summary>정렬·균등 간격 메뉴. 둘(배분은 셋) 이상 골라야 뜻이 있다.</summary>
         private void OnArrangeMenu(object sender, RoutedEventArgs e)
         {
-            if (Canvas1.SelectedMany.Count < 2)
+            if (Canvas1.SelectedMany.Count == 0)
             {
-                StHint.Text = "둘 이상 골라야 정렬할 수 있습니다 — Shift+클릭이나 올가미로 고르세요";
+                StHint.Text = "정렬할 레이어나 그룹을 고르세요 — 하나도 배경 이미지 기준으로 맞출 수 있습니다";
                 return;
             }
 
@@ -110,7 +110,6 @@ namespace SnapView.Editor
                 var item = new MenuItem { Header = header, IsEnabled = enabled };
                 item.Click += (_, _) =>
                 {
-                    PushUndo();
                     action();
                     Canvas1.InvalidateVisual();
                     UpdateStatus();
@@ -118,17 +117,29 @@ namespace SnapView.Editor
                 menu.Items.Add(item);
             }
 
-            var sel = Canvas1.SelectedMany;
-            Add("왼쪽 맞춤", () => ArrangeTools.Align(sel, AlignMode.Left));
-            Add("가로 가운데 맞춤", () => ArrangeTools.Align(sel, AlignMode.CenterH));
-            Add("오른쪽 맞춤", () => ArrangeTools.Align(sel, AlignMode.Right));
+            var selection = new MenuItem { Header = "선택 항목 기준", IsCheckable = true, IsChecked = !_alignToBackground, StaysOpenOnClick = true };
+            var background = new MenuItem { Header = "배경 이미지 기준 (레이어 0)", IsCheckable = true, IsChecked = _alignToBackground, StaysOpenOnClick = true };
+            selection.Click += (_, _) => { _alignToBackground = false; selection.IsChecked = true; background.IsChecked = false; };
+            background.Click += (_, _) => { _alignToBackground = true; background.IsChecked = true; selection.IsChecked = false; };
+            var keepGroups = new MenuItem { Header = "그룹을 하나의 항목으로 정렬", IsCheckable = true, IsChecked = _alignKeepGroups, StaysOpenOnClick = true };
+            keepGroups.Click += (_, _) => _alignKeepGroups = keepGroups.IsChecked;
+            menu.Items.Add(selection); menu.Items.Add(background); menu.Items.Add(keepGroups); menu.Items.Add(new Separator());
+            Add("왼쪽 맞춤", () => AlignSelected(AlignMode.Left));
+            Add("가로 가운데 맞춤", () => AlignSelected(AlignMode.CenterH));
+            Add("오른쪽 맞춤", () => AlignSelected(AlignMode.Right));
             menu.Items.Add(new Separator());
-            Add("위 맞춤", () => ArrangeTools.Align(sel, AlignMode.Top));
-            Add("세로 가운데 맞춤", () => ArrangeTools.Align(sel, AlignMode.CenterV));
-            Add("아래 맞춤", () => ArrangeTools.Align(sel, AlignMode.Bottom));
+            Add("위 맞춤", () => AlignSelected(AlignMode.Top));
+            Add("세로 가운데 맞춤", () => AlignSelected(AlignMode.CenterV));
+            Add("아래 맞춤", () => AlignSelected(AlignMode.Bottom));
             menu.Items.Add(new Separator());
-            Add("가로 간격 고르게", () => ArrangeTools.Distribute(sel, horizontal: true), sel.Count >= 3);
-            Add("세로 간격 고르게", () => ArrangeTools.Distribute(sel, horizontal: false), sel.Count >= 3);
+            void Distribute(bool horizontal)
+            {
+                var units = LayerGroups.Units(Canvas1.Items, Canvas1.SelectedMany, _alignKeepGroups);
+                if (units.Count < 3) { StHint.Text = "간격을 맞출 레이어 또는 그룹이 세 개 이상 필요합니다"; return; }
+                PushUndo(); LayerGroups.Distribute(units, horizontal);
+            }
+            Add("가로 간격 고르게", () => Distribute(true));
+            Add("세로 간격 고르게", () => Distribute(false));
 
             menu.IsOpen = true;
         }

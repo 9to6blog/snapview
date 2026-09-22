@@ -52,9 +52,4 @@ namespace SnapView.Editor
         }
     }
 
-    internal sealed class EditorGuide
-    {
-        internal bool Horizontal { get; init; }
-        internal double Position { get; set; }
-    }
 }

@@ -62,6 +62,8 @@ namespace SnapView.Editor
                 case EditorCommand.CopyResult: CopyResult(); break;
                 case EditorCommand.CutRegion: CopyRegion(cut: true); break;
                 case EditorCommand.Paste: PasteSmart(); break;
+                case EditorCommand.Group: GroupSelection(); break;
+                case EditorCommand.Ungroup: UngroupSelection(); break;
                 case EditorCommand.RotateRight: Rotate(true); break;
                 case EditorCommand.RotateLeft: Rotate(false); break;
                 case EditorCommand.FlipH: Flip(true); break;

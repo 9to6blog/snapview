@@ -5,7 +5,7 @@ using System.Windows.Media.Imaging;
 namespace SnapView.Core
 {
     /// <summary>실행취소 한 칸. 자르기·뒤집기가 이미지 자체를 바꾸므로 그림도 같이 담는다.</summary>
-    internal sealed record EditorSnapshot(BitmapSource Image, List<Annotation> Items, int Counter);
+    internal sealed record EditorSnapshot(BitmapSource Image, List<Annotation> Items, int Counter, List<EditorGuide>? Guides = null);
 
     /// <summary>
     /// 편집기 실행취소 스택.

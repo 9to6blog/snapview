@@ -46,7 +46,7 @@ namespace SnapView.Editor
             _numberArrowEditHandle = handle;
             _numberArrowEditStart = p;
             _numberArrowEditUndoPending = true;
-            SetSelection(arrow);
+            SetSingleSelection(arrow);
             Stage.CaptureMouse();
             Stage.Cursor = handle == NoHandle ? Cursors.SizeAll : HandleCursor(handle, arrow);
             Canvas1.InvalidateVisual();

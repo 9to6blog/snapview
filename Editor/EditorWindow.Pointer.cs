@@ -286,7 +286,7 @@ namespace SnapView.Editor
                         return;
                     }
 
-                    if (!ctrlKey && hit is MagnifierAnnotation pickedMagnifier &&
+                    if (!ctrlKey && hit is MagnifierAnnotation { GroupId: null } pickedMagnifier &&
                         (Canvas1.SelectedMany.Count <= 1 || !Canvas1.SelectedMany.Contains(hit)) &&
                         BeginMagnifierMove(pickedMagnifier, p)) return;
 
@@ -594,7 +594,8 @@ namespace SnapView.Editor
                     {
                         if (a is EraseAnnotation || a.Locked) continue;
                         if (band.IntersectsWith(a.Bounds) && !Canvas1.SelectedMany.Contains(a))
-                            Canvas1.SelectedMany.Add(a);
+                            foreach (Annotation member in LayerGroups.Members(Canvas1.Items, a))
+                                if (!Canvas1.SelectedMany.Contains(member)) Canvas1.SelectedMany.Add(member);
                     }
                     Canvas1.Selected = Canvas1.SelectedMany.Count > 0 ? Canvas1.SelectedMany[^1] : null;
                 }

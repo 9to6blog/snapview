@@ -35,6 +35,7 @@ namespace SnapView.Editor
         }
 
         private readonly Dictionary<Annotation, LayerRow> _layerRows = new();
+        private BitmapSource? _layerBackgroundImage;
 
         /// <summary>
         /// 주석 목록을 맞춘다. 위에 그려지는 것이 목록에서도 위로 오도록 <b>거꾸로</b> 늘어놓는다.
@@ -48,34 +49,62 @@ namespace SnapView.Editor
             _syncingLayers = true;
             try
             {
-                var desired = new List<Annotation>();
+                var desired = new List<object>();
+                var groups = new HashSet<string>();
                 for (int i = Canvas1.Items.Count - 1; i >= 0; i--)
-                    if (Canvas1.Items[i] is not EraseAnnotation) desired.Add(Canvas1.Items[i]);   // 지운 자리는 레이어가 아니다
+                {
+                    Annotation a = Canvas1.Items[i];
+                    if (a is EraseAnnotation) continue;
+                    if (a.GroupId == null) { desired.Add(a); continue; }
+                    if (!groups.Add(a.GroupId)) continue;
+                    desired.Add(a.GroupId);
+                    if (!_collapsedGroups.Contains(a.GroupId))
+                        desired.AddRange(Canvas1.Items.AsEnumerable().Reverse().Where(m => m.GroupId == a.GroupId && m is not EraseAnnotation));
+                }
+                desired.Add(BackgroundLayerTag);
 
-                bool same = LayerList.Items.Count == desired.Count;
+                bool same = LayerList.Items.Count == desired.Count && ReferenceEquals(_layerBackgroundImage, _image);
                 for (int i = 0; same && i < desired.Count; i++)
-                    same = LayerList.Items[i] is FrameworkElement fe && ReferenceEquals(fe.Tag, desired[i]);
+                    same = LayerList.Items[i] is FrameworkElement fe && Equals(fe.Tag, desired[i]);
 
                 if (!same)
                 {
                     LayerList.Items.Clear();
                     _layerRows.Clear();
-                    foreach (Annotation a in desired)
+                    _groupRows.Clear(); _layerBackgroundImage = _image;
+                    foreach (object entry in desired)
                     {
-                        LayerRow row = MakeLayerRow(a);
-                        _layerRows[a] = row;
-                        LayerList.Items.Add(row.Panel);
+                        if (entry is Annotation a)
+                        {
+                            LayerRow row = MakeLayerRow(a); _layerRows[a] = row;
+                            row.Panel.Margin = new Thickness(a.GroupId == null ? 0 : 16, 3, 0, 3);
+                            LayerList.Items.Add(row.Panel);
+                        }
+                        else if (entry is string id)
+                        {
+                            LayerRow row = MakeGroupRow(id); _groupRows[id] = row; LayerList.Items.Add(row.Panel);
+                        }
+                        else LayerList.Items.Add(MakeBackgroundRow());
                     }
                 }
 
-                for (int i = 0; i < desired.Count; i++)
-                    if (_layerRows.TryGetValue(desired[i], out LayerRow? row))
-                        UpdateLayerRow(row, desired[i], Canvas1.Items.IndexOf(desired[i]));
+                foreach (var entry in _layerRows) UpdateLayerRow(entry.Value, entry.Key, Canvas1.Items.IndexOf(entry.Key));
+                foreach (var entry in _groupRows)
+                {
+                    var members = Canvas1.Items.Where(a => a.GroupId == entry.Key).ToList();
+                    entry.Value.Label.Text = (members[0].GroupName ?? "그룹") + $" ({members.Count})";
+                    entry.Value.Eye.IsChecked = members.All(a => a.Visible) ? true : members.All(a => !a.Visible) ? false : null;
+                }
 
                 LayerList.SelectedItems.Clear();
                 foreach (object item in LayerList.Items)
-                    if (item is FrameworkElement fe && fe.Tag is Annotation a2 && Canvas1.SelectedMany.Contains(a2))
-                        LayerList.SelectedItems.Add(item);
+                    if (item is FrameworkElement fe)
+                    {
+                        if (_backgroundSelected && ReferenceEquals(fe.Tag, BackgroundLayerTag)) LayerList.SelectedItems.Add(item);
+                        if (fe.Tag is string id && Canvas1.Items.Where(a => a.GroupId == id).All(Canvas1.SelectedMany.Contains)) LayerList.SelectedItems.Add(item);
+                        if (fe.Tag is Annotation a && Canvas1.SelectedMany.Contains(a) &&
+                            (a.GroupId == null || !Canvas1.Items.Where(m => m.GroupId == a.GroupId).All(Canvas1.SelectedMany.Contains))) LayerList.SelectedItems.Add(item);
+                    }
             }
             finally { _syncingLayers = false; }
         }
@@ -137,6 +166,10 @@ namespace SnapView.Editor
             var rename = new MenuItem { Header = "이름 바꾸기..." };
             rename.Click += (_, _) => RenameLayer(a);
             menu.Items.Add(rename);
+            var group = new MenuItem { Header = "선택 레이어 그룹화", InputGestureText = "Ctrl+G" };
+            group.Click += OnGroupLayers; menu.Items.Add(group);
+            var ungroup = new MenuItem { Header = "그룹 해제", InputGestureText = "Ctrl+Shift+G" };
+            ungroup.Click += (_, _) => { SetSelection(a); UngroupSelection(); }; menu.Items.Add(ungroup);
 
             var lockItem = new MenuItem
             {
@@ -173,11 +206,11 @@ namespace SnapView.Editor
         }
 
         /// <summary>레이어 이름을 바꾼다. 비우면 다시 종류로 부른다.</summary>
-        private void RenameLayer(Annotation a)
+        private void RenameLayer(Annotation a, bool group = false)
         {
             var box = new TextBox
             {
-                Text = a.Name ?? "", MinWidth = 200, Height = 26,
+                Text = (group ? a.GroupName : a.Name) ?? "", MinWidth = 200, Height = 26,
                 VerticalContentAlignment = VerticalAlignment.Center
             };
             var ok = new Button { Content = "확인", MinWidth = 56, IsDefault = true, Margin = new Thickness(0, 10, 0, 0) };
@@ -190,7 +223,7 @@ namespace SnapView.Editor
 
             var dlg = new Window
             {
-                Title = "레이어 이름",
+                Title = group ? "그룹 이름" : "레이어 이름",
                 Owner = this,
                 SizeToContent = SizeToContent.WidthAndHeight,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -204,7 +237,9 @@ namespace SnapView.Editor
             if (dlg.ShowDialog() != true) return;
 
             PushUndo();
-            a.Name = string.IsNullOrWhiteSpace(box.Text) ? null : box.Text.Trim();
+            string? name = string.IsNullOrWhiteSpace(box.Text) ? null : box.Text.Trim();
+            if (group) foreach (Annotation member in LayerGroups.Members(Canvas1.Items, a)) member.GroupName = name;
+            else a.Name = name;
             UpdateStatus();
         }
 
@@ -232,10 +267,16 @@ namespace SnapView.Editor
 
             ConfirmActive();
 
+            _backgroundSelected = LayerList.SelectedItems.Cast<object>().OfType<FrameworkElement>().Any(fe => ReferenceEquals(fe.Tag, BackgroundLayerTag));
             Canvas1.SelectedMany.Clear();
             foreach (object item in LayerList.SelectedItems)
-                if (item is FrameworkElement fe && fe.Tag is Annotation a)
-                    Canvas1.SelectedMany.Add(a);
+                if (item is FrameworkElement fe)
+                {
+                    if (fe.Tag is Annotation a && !Canvas1.SelectedMany.Contains(a)) Canvas1.SelectedMany.Add(a);
+                    if (fe.Tag is string id)
+                        foreach (Annotation m in Canvas1.Items.Where(a => a.GroupId == id))
+                            if (!Canvas1.SelectedMany.Contains(m)) Canvas1.SelectedMany.Add(m);
+                }
             Canvas1.Selected = Canvas1.SelectedMany.Count > 0 ? Canvas1.SelectedMany[^1] : null;
 
             SelectTool(ToolKind.Select);
@@ -245,22 +286,23 @@ namespace SnapView.Editor
         /// <summary>고른 주석을 목록에서 옮긴다. delta 가 +면 위(나중에 그림)로.</summary>
         private void MoveLayer(int delta, bool toEnd)
         {
-            Annotation? target = Canvas1.Selected;
-            if (target == null) { StHint.Text = "먼저 주석을 고르세요"; return; }
-
-            int from = Canvas1.Items.IndexOf(target);
-            if (from < 0) return;
-
-            int to = toEnd
-                ? (delta > 0 ? Canvas1.Items.Count - 1 : 0)
-                : Math.Clamp(from + delta, 0, Canvas1.Items.Count - 1);
-
-            if (to == from) return;
-
+            var targets = Canvas1.Items.Where(Canvas1.SelectedMany.Contains).ToList();
+            if (targets.Count == 0) { StHint.Text = "먼저 레이어나 그룹을 고르세요"; return; }
+            if (targets.Any(a => a.Locked)) { StHint.Text = "잠긴 레이어의 잠금을 먼저 풀어 주세요"; return; }
+            var remaining = Canvas1.Items.Where(a => !targets.Contains(a)).ToList();
+            int edge = delta > 0 ? Canvas1.Items.IndexOf(targets[^1]) : Canvas1.Items.IndexOf(targets[0]);
+            Annotation? neighbor = delta > 0 ? Canvas1.Items.Skip(edge + 1).FirstOrDefault(a => !targets.Contains(a))
+                : Canvas1.Items.Take(edge).LastOrDefault(a => !targets.Contains(a));
+            if (!toEnd && neighbor == null) return;
+            int insert = delta > 0 ? remaining.Count : 0;
+            if (!toEnd && neighbor != null)
+            {
+                var unit = LayerGroups.Members(remaining, neighbor);
+                insert = delta > 0 ? unit.Max(remaining.IndexOf) + 1 : unit.Min(remaining.IndexOf);
+            }
             PushUndo();
-            Canvas1.Items.RemoveAt(from);
-            Canvas1.Items.Insert(to, target);
-            SetSelection(target);
+            remaining.InsertRange(insert, targets);
+            Canvas1.Items.Clear(); Canvas1.Items.AddRange(remaining);
             Canvas1.InvalidateVisual();
             UpdateStatus();
         }
@@ -309,13 +351,11 @@ namespace SnapView.Editor
             if (Canvas1.SelectedMany.Count == 0) { StHint.Text = "먼저 주석을 고르세요"; return; }
 
             PushUndo();
-            var clones = new List<Annotation>();
-            foreach (Annotation s in Canvas1.SelectedMany)
+            var clones = LayerGroups.Duplicate(Canvas1.Items.Where(Canvas1.SelectedMany.Contains).ToList());
+            foreach (Annotation c in clones)
             {
-                Annotation c = s.Clone();
                 c.Move(offset);
                 Canvas1.Items.Add(c);
-                clones.Add(c);
                 if (c is CounterAnnotation n) n.Number = _counter++;
                 else if (c is NumberArrowAnnotation an) an.Number = _counter++;
             }
@@ -333,7 +373,7 @@ namespace SnapView.Editor
         {
             if (Canvas1.SelectedMany.Count == 0) return;
 
-            _annClipboard = Canvas1.SelectedMany.Select(a => a.Clone()).ToList();
+            _annClipboard = ArrangeTools.CloneAll(Canvas1.Items.Where(Canvas1.SelectedMany.Contains).ToList());
             try { Clipboard.SetText(AnnClipboardMarker); } catch { }
             StHint.Text = $"주석 {_annClipboard.Count}개 복사 — Ctrl+V 로 붙여넣기";
         }
@@ -359,13 +399,11 @@ namespace SnapView.Editor
             ConfirmActive();
             PushUndo();
 
-            var clones = new List<Annotation>();
-            foreach (Annotation s in _annClipboard!)
+            var clones = LayerGroups.Duplicate(_annClipboard!);
+            foreach (Annotation c in clones)
             {
-                Annotation c = s.Clone();
                 c.Move(new Vector(20, 20));
                 Canvas1.Items.Add(c);
-                clones.Add(c);
                 if (c is CounterAnnotation n) n.Number = _counter++;
                 else if (c is NumberArrowAnnotation an) an.Number = _counter++;
             }

@@ -55,7 +55,7 @@ namespace SnapView.Editor
 
             try
             {
-                ProjectFile.Save(dlg.FileName, _image, Canvas1.Items, _counter);
+                ProjectFile.Save(dlg.FileName, _image, Canvas1.Items, _counter, Canvas1.ManualGuides);
                 _projectPath = dlg.FileName;
                 _dirty = false;
                 UpdateTitle();
@@ -80,7 +80,7 @@ namespace SnapView.Editor
 
             try
             {
-                (BitmapSource image, List<Annotation> items, int counter) = ProjectFile.Load(dlg.FileName);
+                (BitmapSource image, List<Annotation> items, int counter) = ProjectFile.Load(dlg.FileName, out var guides);
 
                 CommitText();
                 CancelActive();
@@ -89,6 +89,7 @@ namespace SnapView.Editor
                 _image = image;
                 _counter = counter;
                 Canvas1.Source = image;
+                RestoreGuides(guides);
                 Canvas1.Items.Clear();
                 Canvas1.Items.AddRange(items);
                 SetSelection(null);
@@ -475,11 +476,12 @@ namespace SnapView.Editor
             List<Annotation> items = ArrangeTools.CloneAll(Canvas1.Items);
             if (Canvas1.Active != null && Canvas1.Active is not CropAnnotation) items.Add(Canvas1.Active.Clone());
             int counter = _counter;
+            var guides = Canvas1.ManualGuides.Select(g => g.Clone()).ToList();
 
             _autosaving = true;
             System.Threading.Tasks.Task.Run(() =>
             {
-                try { _recovery.Save(image, items, counter); }
+                try { _recovery.Save(image, items, counter, guides); }
                 catch (Exception ex) { Log.Write("임시 저장 실패: " + ex.Message); }
             }).ContinueWith(_ => Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -499,11 +501,12 @@ namespace SnapView.Editor
                     "SnapView", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (r == MessageBoxResult.Yes)
                 {
-                    (BitmapSource image, List<Annotation> items, int counter) = _recovery.Load();
+                    (BitmapSource image, List<Annotation> items, int counter) = _recovery.Load(out var guides);
                     PushUndo();   // 지금 캡처로 되돌릴 수 있게
                     _image = image;
                     _counter = counter;
                     Canvas1.Source = image;
+                    RestoreGuides(guides);
                     Canvas1.Items.Clear();
                     Canvas1.Items.AddRange(items);
                     SetSelection(null);

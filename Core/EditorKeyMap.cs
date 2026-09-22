@@ -6,7 +6,7 @@ namespace SnapView.Core
     internal enum EditorCommand
     {
         None, Tool, PickColor, ToggleFill, Nudge, Help,
-        Undo, Redo, SelectAll, Duplicate, CopyRegion, CopyAnnotations, CopyResult, CutRegion, Paste,
+        Undo, Redo, SelectAll, Duplicate, Group, Ungroup, CopyRegion, CopyAnnotations, CopyResult, CutRegion, Paste,
         RotateRight, RotateLeft, FlipH, FlipV, Save, SaveProject, Done,
         LayerUp, LayerDown, LayerTop, LayerBottom, Zoom100, ZoomIn, ZoomOut, ZoomFit,
         WandErase, WandFill, WandClear, Confirm, CancelActive, DeleteSelection, Deselect, Close
@@ -127,6 +127,7 @@ namespace SnapView.Core
             Key.Y => KeyAction.Of(EditorCommand.Redo),
             Key.A => KeyAction.Of(EditorCommand.SelectAll),
             Key.D => KeyAction.Of(EditorCommand.Duplicate),
+            Key.G => KeyAction.Of(shift ? EditorCommand.Ungroup : EditorCommand.Group),
             Key.C => KeyAction.Of(s.HasRegion ? EditorCommand.CopyRegion
                                 : s.SelectionCount > 0 ? EditorCommand.CopyAnnotations
                                 : EditorCommand.CopyResult),

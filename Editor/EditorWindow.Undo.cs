@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using SnapView.Core;
@@ -22,7 +23,7 @@ namespace SnapView.Editor
         }
 
         private EditorSnapshot Current()
-            => new(_image, ArrangeTools.CloneAll(Canvas1.Items), _counter);
+            => new(_image, ArrangeTools.CloneAll(Canvas1.Items), _counter, Canvas1.ManualGuides.Select(g => g.Clone()).ToList());
 
         private void Restore(EditorSnapshot snap)
         {
@@ -32,6 +33,7 @@ namespace SnapView.Editor
             _counter = snap.Counter;
 
             Canvas1.Source = _image;
+            RestoreGuides(snap.Guides);
             Canvas1.Items.Clear();
             Canvas1.Items.AddRange(snap.Items);
             Canvas1.Active = null;

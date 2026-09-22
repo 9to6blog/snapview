@@ -94,7 +94,7 @@ namespace SnapView.Editor
             _magnifierDragOffset = (part == MagnifierPart.Source ? mag.SourceCenter : mag.Center) - p;
             _placingMagnifier = false;
             _magnifierUndoPending = !ReferenceEquals(Canvas1.Active, mag);
-            if (_magnifierUndoPending) SetSelection(mag);
+            if (_magnifierUndoPending) SetSingleSelection(mag);
             Stage.CaptureMouse();
             Stage.Cursor = Cursors.SizeAll;
             Canvas1.InvalidateVisual();

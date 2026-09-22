@@ -48,6 +48,7 @@ namespace SnapView.Editor
         internal double? GuideY { get; set; }
         internal List<EditorGuide> ManualGuides { get; } = new();
         internal bool ShowManualGuides { get; set; }
+        internal bool ShowGuideMeasurements { get; set; } = true;
 
         /// <summary>자동 선택이 고른 영역의 표시(파란 물들임). null 이면 없음.</summary>
         internal BitmapSource? SelectionTint { get; set; }
@@ -132,14 +133,7 @@ namespace SnapView.Editor
 
                 if (ShowManualGuides)
                 {
-                    var pen = new Pen(Brushes.DeepSkyBlue, 1 / _scale);
-                    dc.PushClip(new RectangleGeometry(new Rect(0, 0, ImageWidth, ImageHeight)));
-                    foreach (EditorGuide guide in ManualGuides)
-                    {
-                        if (guide.Horizontal) dc.DrawLine(pen, new Point(0, guide.Position), new Point(ImageWidth, guide.Position));
-                        else dc.DrawLine(pen, new Point(guide.Position, 0), new Point(guide.Position, ImageHeight));
-                    }
-                    dc.Pop();
+                    DrawManualGuides(dc);
                 }
 
                 // 스마트 가이드: 스냅이 잡은 기준선을 화면 끝까지 긋는다(분홍).
@@ -159,6 +153,44 @@ namespace SnapView.Editor
                 }
             }
             finally { dc.Pop(); }
+        }
+
+        private void DrawManualGuides(DrawingContext dc)
+        {
+            var pen = new Pen(Brushes.DeepSkyBlue, 1 / _scale);
+            var diagonalPen = new Pen(Brushes.Gold, 1 / _scale) { DashStyle = DashStyles.Dash };
+            dc.PushClip(new RectangleGeometry(new Rect(0, 0, ImageWidth, ImageHeight)));
+            foreach (EditorGuide guide in ManualGuides)
+            {
+                var line = guide.Line(ImageWidth, ImageHeight);
+                dc.DrawLine(guide.Diagonal ? diagonalPen : pen, line.Start, line.End);
+                if (!guide.Diagonal) continue;
+                dc.DrawEllipse(Brushes.White, diagonalPen, guide.Start, 4 / _scale, 4 / _scale);
+                dc.DrawEllipse(Brushes.White, diagonalPen, guide.End, 4 / _scale, 4 / _scale);
+                if (ShowGuideMeasurements)
+                    DrawGuideLabel(dc, $"{guide.Length:0.#} px · {guide.Angle:0.#}°", guide.Start + (guide.End - guide.Start) * 0.5, Brushes.Gold);
+            }
+            if (ShowGuideMeasurements && ManualGuides.Exists(g => !g.Diagonal))
+                foreach (Rect cell in GuideMeasurements.Cells(ManualGuides, ImageWidth, ImageHeight))
+                {
+                    if (cell.Width * _scale < 64 || cell.Height * _scale < 24) continue;
+                    DrawGuideLabel(dc, $"{cell.Width:0.#} × {cell.Height:0.#} px",
+                        new Point(cell.X + cell.Width / 2, cell.Y + cell.Height / 2), Brushes.DeepSkyBlue);
+                }
+            dc.Pop();
+        }
+
+        private void DrawGuideLabel(DrawingContext dc, string value, Point center, Brush color)
+        {
+            var text = new FormattedText(value, System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11 / _scale, color,
+                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            double pad = 4 / _scale;
+            Point origin = new(Math.Clamp(center.X - text.Width / 2, pad, Math.Max(pad, ImageWidth - text.Width - pad)),
+                Math.Clamp(center.Y - text.Height / 2, pad, Math.Max(pad, ImageHeight - text.Height - pad)));
+            dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(225, 22, 25, 31)), null,
+                new Rect(origin.X - pad, origin.Y - pad / 2, text.Width + pad * 2, text.Height + pad), pad, pad);
+            dc.DrawText(text, origin);
         }
 
         /// <summary>고른 영역 — 바깥을 살짝 어둡게 덮고 테두리를 점선으로.</summary>

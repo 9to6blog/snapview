@@ -30,6 +30,18 @@ namespace SnapView.Core
             public int Counter { get; set; } = 1;
             public string Image { get; set; } = "";
             public List<Item> Items { get; set; } = new();
+            public List<GuideItem>? Guides { get; set; }
+        }
+
+        private sealed class GuideItem
+        {
+            public bool Horizontal { get; set; }
+            public double Position { get; set; }
+            public bool Diagonal { get; set; }
+            public double X1 { get; set; }
+            public double Y1 { get; set; }
+            public double X2 { get; set; }
+            public double Y2 { get; set; }
         }
 
         /// <summary>모든 주석 종류의 필드를 한 자루에 담는다. 종류마다 쓰는 것만 채운다.</summary>
@@ -47,6 +59,8 @@ namespace SnapView.Core
             public bool Dashed { get; set; }
             public bool Locked { get; set; }
             public string? Name { get; set; }
+            public string? GroupId { get; set; }
+            public string? GroupName { get; set; }
 
             // 두 점짜리 (도형·가리개·강조·자르기·그림)
             public double? X1 { get; set; }
@@ -109,7 +123,7 @@ namespace SnapView.Core
         // ===================== 저장 =====================
 
         internal static void Save(string path, BitmapSource image,
-                                  IEnumerable<Annotation> items, int counter)
+                                  IEnumerable<Annotation> items, int counter, IEnumerable<EditorGuide>? guides = null)
         {
             var list = new List<Annotation>(items);
             var root = new Root
@@ -117,6 +131,16 @@ namespace SnapView.Core
                 Counter = counter,
                 Image = Convert.ToBase64String(ImageIO.EncodePng(image))
             };
+
+            if (guides != null)
+            {
+                root.Guides = new List<GuideItem>();
+                foreach (EditorGuide g in guides) root.Guides.Add(new GuideItem
+                {
+                    Horizontal = g.Horizontal, Position = g.Position, Diagonal = g.Diagonal,
+                    X1 = g.Start.X, Y1 = g.Start.Y, X2 = g.End.X, Y2 = g.End.Y
+                });
+            }
 
             foreach (Annotation a in list)
             {
@@ -150,7 +174,7 @@ namespace SnapView.Core
                 DashPattern = a.Dashed && a.DashPattern != SnapView.Core.DashPattern.Dash
                     ? a.DashPattern.ToString() : null,
                 Locked = a.Locked,
-                Name = a.Name
+                Name = a.Name, GroupId = a.GroupId, GroupName = a.GroupName
             };
 
             switch (a)
@@ -244,11 +268,20 @@ namespace SnapView.Core
         // ===================== 열기 =====================
 
         internal static (BitmapSource Image, List<Annotation> Items, int Counter) Load(string path)
+            => Load(path, out _);
+
+        internal static (BitmapSource Image, List<Annotation> Items, int Counter) Load(string path, out List<EditorGuide> guides)
         {
             Root root = JsonSerializer.Deserialize<Root>(File.ReadAllText(path), Options)
                         ?? throw new InvalidOperationException("프로젝트 파일이 비어 있습니다");
             if (root.App != "SnapView")
                 throw new InvalidOperationException("SnapView 프로젝트 파일이 아닙니다");
+
+            guides = new List<EditorGuide>();
+            foreach (GuideItem g in root.Guides ?? new List<GuideItem>())
+                if (double.IsFinite(g.Position) && double.IsFinite(g.X1) && double.IsFinite(g.Y1) && double.IsFinite(g.X2) && double.IsFinite(g.Y2))
+                    guides.Add(new EditorGuide { Horizontal = g.Horizontal, Position = g.Position, Diagonal = g.Diagonal,
+                        Start = new Point(g.X1, g.Y1), End = new Point(g.X2, g.Y2) });
 
             BitmapSource image = DecodePng(root.Image);
             var items = new List<Annotation>();
@@ -376,6 +409,8 @@ namespace SnapView.Core
             if (Enum.TryParse(it.DashPattern, out DashPattern dashPattern)) a.DashPattern = dashPattern;
             a.Locked = it.Locked;
             a.Name = it.Name;
+            a.GroupId = string.IsNullOrWhiteSpace(it.GroupId) ? null : it.GroupId;
+            a.GroupName = it.GroupName;
             return a;
         }
 

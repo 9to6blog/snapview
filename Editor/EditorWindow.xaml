@@ -38,6 +38,8 @@
                 <StackPanel Style="{StaticResource EditorActionGroup}" Margin="0,2,0,2">
                     <Button Style="{StaticResource EditorIconButton}" Content="꾸며서 내보내기" ed:ToolbarIcon.Data="{StaticResource EditExport}" ToolTip="꾸며서 내보내기 · 여백·배경·그림자·워터마크" Click="OnExportDecorated" />
                     <ToggleButton x:Name="TbRulers" Style="{StaticResource EditorToggleAction}" Content="줄자" ed:ToolbarIcon.Data="{StaticResource EditRuler}" ToolTip="픽셀 줄자 · 끌어서 가이드 추가 · 가이드를 그림 밖으로 끌면 삭제" Click="OnRulersToggled" />
+                    <ToggleButton x:Name="TbDiagonalGuide" Style="{StaticResource EditorToggleAction}" Content="대각" ed:ToolbarIcon.Data="{StaticResource EditLine}" ToolTip="누른 뒤 드래그해 대각 가이드 추가 · 두 끝점으로 각도·길이 조절" Click="OnDiagonalGuide" />
+                    <ToggleButton x:Name="TbGuideMeasurements" Style="{StaticResource EditorToggleAction}" Content="치수" IsChecked="True" ed:ToolbarIcon.Data="{StaticResource EditResize}" ToolTip="가이드 구간 폭·높이와 대각선 길이·각도 표시" Click="OnGuideMeasurements" />
                     <Button x:Name="BtnClearGuides" Style="{StaticResource EditorIconButton}" Content="가이드 모두 지우기" ed:ToolbarIcon.Data="{StaticResource EditClearGuides}" ToolTip="가이드 모두 지우기" Click="OnClearGuides" />
                     <Button x:Name="BtnDone" Style="{StaticResource EditorAction}" Content="완료" Foreground="#FF8CD9A9" ed:ToolbarIcon.Data="{StaticResource IconCheck}" ToolTip="설정대로 저장·복사하고 닫기 (Ctrl+Enter)" Click="OnDone" />
                 </StackPanel>
@@ -255,6 +257,10 @@
                     </StackPanel>
                 </Border>
                 <TextBlock x:Name="LayerEmpty" DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="{StaticResource FgDim}" FontSize="11.5" LineHeight="20" Margin="12,12,12,0" Text="그림 위에 주석을 추가하면 여기에 표시됩니다." />
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,3,6,5">
+                    <Button Style="{StaticResource EditorAction}" Content="그룹" ed:ToolbarIcon.Data="{StaticResource EditLayers}" ToolTip="선택 레이어 그룹화 (Ctrl+G)" Click="OnGroupLayers" />
+                    <Button Style="{StaticResource EditorAction}" Content="해제" ed:ToolbarIcon.Data="{StaticResource EditRegion}" ToolTip="그룹 해제 (Ctrl+Shift+G)" Click="OnUngroupLayers" />
+                </StackPanel>
                 <ListBox x:Name="LayerList" Background="Transparent" BorderThickness="0" Foreground="{StaticResource Fg}" SelectionMode="Extended" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="OnLayerSelected" HorizontalContentAlignment="Stretch" />
             </DockPanel>
         </Border>

@@ -53,6 +53,8 @@
     <Compile Include="..\..\Core\WindowMemory.cs" />
     <Compile Include="..\..\Core\RecentColors.cs" />
     <Compile Include="..\..\Core\UndoStack.cs" />
+    <Compile Include="..\..\Core\EditorGuide.cs" />
+    <Compile Include="..\..\Core\LayerGroups.cs" />
     <Compile Include="..\..\Core\EditorMath.cs" />
     <Compile Include="..\..\Core\EditorRules.cs" />
     <Compile Include="..\..\Core\EditorKeyMap.cs" />

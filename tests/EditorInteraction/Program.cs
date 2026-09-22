@@ -14,7 +14,7 @@ using System.Xml.Linq;
 
 // Exercise the same coordinate handlers used by WPF mouse events, without moving
 // the user's mouse, opening editor windows, or changing their saved preferences.
-static class Program
+static partial class Program
 {
     const BindingFlags Members = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
     static readonly Assembly AppAssembly = typeof(SnapView.Editor.EditorWindow).Assembly;
@@ -279,6 +279,7 @@ static class Program
             Directory.CreateDirectory(tmp);
             TestNumberArrows(Path.Combine(tmp, "arrows"));
             TestNumberArrowEditing(Path.Combine(tmp, "arrow-edits"), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
+            TestGroupsAndGuides(Path.Combine(tmp, "groups-guides"), args.Length > 2 ? Path.GetFullPath(args[2]) : null);
             Window w = TestMagnifiers(Path.Combine(tmp, "magnifiers"));
             TestToast(w, args.Length > 0 ? Path.GetFullPath(args[0]) : null);
             Console.WriteLine($"RESULT: {passed} interaction checks passed"); return 0;

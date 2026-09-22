@@ -26,15 +26,16 @@ namespace SnapView.Core
         internal DateTime SavedAt => Exists ? File.GetLastWriteTime(_path) : DateTime.MinValue;
 
         /// <summary>임시 파일에 쓰고 바꿔치기한다. 쓰다 죽어도 반쪽짜리가 남지 않게.</summary>
-        internal void Save(BitmapSource image, IEnumerable<Annotation> items, int counter)
+        internal void Save(BitmapSource image, IEnumerable<Annotation> items, int counter, IEnumerable<EditorGuide>? guides = null)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             string tmp = _path + ".tmp";
-            ProjectFile.Save(tmp, image, items, counter);
+            ProjectFile.Save(tmp, image, items, counter, guides);
             File.Move(tmp, _path, overwrite: true);
         }
 
         internal (BitmapSource Image, List<Annotation> Items, int Counter) Load() => ProjectFile.Load(_path);
+        internal (BitmapSource Image, List<Annotation> Items, int Counter) Load(out List<EditorGuide> guides) => ProjectFile.Load(_path, out guides);
 
         internal void Clear()
         {
