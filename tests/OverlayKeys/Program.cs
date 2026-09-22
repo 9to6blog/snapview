@@ -79,6 +79,30 @@ internal static class Program
             Check("Enter uses configured confirmation", Action(overlay) == "Confirm");
         });
 
+        foreach (string name in new[] { "BtnMagnet", "BtnEdit", "BtnCopy", "BtnSave", "BtnOk", "BtnCancel" })
+            Run("Capture Escape with " + name + " focused", "Capture", true,
+                overlay => TestCancel(overlay, FocusButton(overlay, name)));
+
+        Run("Idle Escape cancels the capture overlay", "Capture", false, overlay =>
+        {
+            overlay.Focus();
+            TestCancel(overlay, overlay);
+        });
+
+        Run("Record Escape cancels the selected recording area", "Record", true, overlay =>
+            TestCancel(overlay, FocusButton(overlay, "BtnMagnet")));
+
+        Run("Escape release without a press inside the overlay", "Capture", true, overlay =>
+        {
+            var button = FocusButton(overlay, "BtnMagnet");
+            KeyEventArgs release = RouteKey(button, Key.Escape, false);
+            Check("unmatched Escape release is consumed in preview",
+                release.Handled && release.RoutedEvent == Keyboard.PreviewKeyUpEvent);
+            Check("unmatched Escape release leaves the overlay open", overlay.IsVisible);
+            Check("unmatched Escape release produces no result", Result(overlay) == null);
+            TestCancel(overlay, button);
+        });
+
         application.Shutdown();
         Console.WriteLine($"Overlay key regression: {_passed} passed, {_failed} failed.");
         return _failed == 0 ? 0 : 1;
@@ -120,6 +144,41 @@ internal static class Program
         Check("Space produces a SaveOnly result", Action(overlay) == "SaveOnly");
         Check("overlay closes exactly once", closed == 1 && !overlay.IsVisible);
         Check("Space never reactivates the focused button", clicks == clicksBeforeSpace);
+    }
+
+    private static void TestCancel(OverlayWindow overlay, UIElement input)
+    {
+        int clicks = 0;
+        int closed = 0;
+        bool handledWhenClosed = false;
+        KeyEventArgs? release = null;
+        if (input is Button button)
+            button.Click += (_, _) => clicks++;
+        overlay.Closed += (_, _) =>
+        {
+            closed++;
+            handledWhenClosed = release?.Handled == true;
+        };
+
+        for (int repeat = 0; repeat < 3; repeat++)
+        {
+            KeyEventArgs down = RouteKey(input, Key.Escape, true);
+            Check($"Escape down {repeat + 1} is consumed in preview",
+                down.Handled && down.RoutedEvent == Keyboard.PreviewKeyDownEvent);
+            Check($"Escape down {repeat + 1} waits for release", overlay.IsVisible && closed == 0);
+            if (input is Button focusedButton)
+                Check($"Escape down {repeat + 1} does not press the button", !focusedButton.IsPressed);
+        }
+
+        release = CreateKey(input, Key.Escape, false);
+        RouteKey(input, release, false);
+        Check("Escape release is consumed in preview",
+            release.Handled && release.RoutedEvent == Keyboard.PreviewKeyUpEvent);
+        Check("Escape release is already consumed when the overlay closes", handledWhenClosed);
+        Check("Escape leaves no capture or recording result", Result(overlay) == null);
+        Check("Escape returns a cancelled dialog result", overlay.DialogResult == false);
+        Check("Escape closes the overlay exactly once", closed == 1 && !overlay.IsVisible);
+        Check("Escape never clicks the focused toolbar button", clicks == 0);
     }
 
     private static Button FocusButton(OverlayWindow overlay, string name)

@@ -638,23 +638,30 @@ namespace SnapView.Capture
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
             base.OnPreviewKeyDown(e);
-            if (e.Key != Key.Space) return;
+            if (e.Key is not (Key.Space or Key.Escape)) return;
 
             // 툴바를 클릭하면 그 버튼에 포커스가 남는다. 버블링 KeyDown/KeyUp에서
             // 처리하면 ButtonBase가 Space를 먼저 소비해 마지막 버튼을 다시 누른다.
-            // 누름부터 가로채되, 아래의 키 뗌까지 기다려 원래 앱으로 입력이 새지 않게 한다.
-            _seenDown.Add(Key.Space);
+            // Space와 Esc는 누름부터 가로채되, 아래의 키 뗌까지 기다려 원래 앱으로
+            // 입력이 새지 않게 한다. 툴바 포커스와 무관하게 저장/전체 취소를 보장한다.
+            _seenDown.Add(e.Key);
             e.Handled = true;
         }
 
         protected override void OnPreviewKeyUp(KeyEventArgs e)
         {
             base.OnPreviewKeyUp(e);
-            if (e.Key != Key.Space) return;
+            if (e.Key is not (Key.Space or Key.Escape)) return;
 
             // 닫기 전에 처리 표시를 해야 포커스가 있던 버튼이나 바탕 앱에 전달되지 않는다.
             e.Handled = true;
-            if (!_seenDown.Remove(Key.Space)) return;
+            if (!_seenDown.Remove(e.Key)) return;
+            if (e.Key == Key.Escape)
+            {
+                // 영역을 골랐어도 다시 선택 단계로 돌아가지 않고 캡처 전체를 취소한다.
+                Cancel();
+                return;
+            }
             if (_phase != Phase.Adjusting) return;
 
             Finish(_purpose == OverlayPurpose.Capture
@@ -707,7 +714,7 @@ namespace SnapView.Capture
             {
                 switch (e.Key)
                 {
-                    // Space는 버튼 포커스와 무관하게 PreviewKeyUp에서 따로 처리한다.
+                    // Space/Esc는 버튼 포커스와 무관하게 PreviewKeyUp에서 따로 처리한다.
                     case Key.Enter: Finish(OverlayAction.Confirm); return;
                     // 이 키들은 "찍을 때" 만 뜻이 있다. 녹화 중에 S 를 눌러 저장이 되면 이상하다.
                     case Key.E when _purpose == OverlayPurpose.Capture:
@@ -716,11 +723,8 @@ namespace SnapView.Capture
                         Finish(OverlayAction.CopyOnly); return;
                     case Key.S when _purpose == OverlayPurpose.Capture:
                         Finish(OverlayAction.SaveOnly); return;
-                    case Key.Escape: ResetToIdle(); return;
                 }
             }
-
-            if (e.Key == Key.Escape) Cancel();
         }
 
         /// <summary>선택을 옮기거나(dx,dy) 크기를 바꾼다(dw,dh).</summary>
@@ -736,18 +740,6 @@ namespace SnapView.Capture
 
             _selection = new Rect(x, y, w, h);
             _pickedWindow = IntPtr.Zero;
-            UpdateVisuals();
-        }
-
-        private void ResetToIdle()
-        {
-            _phase = Phase.Idle;
-            _selection = Rect.Empty;
-            _pickedWindow = IntPtr.Zero;
-            _hover = null;
-            Cursor = Cursors.Cross;
-            ActionBar.Visibility = Visibility.Collapsed;
-            HintBar.Visibility = Visibility.Visible;
             UpdateVisuals();
         }
 
