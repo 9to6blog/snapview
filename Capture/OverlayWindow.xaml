@@ -98,13 +98,13 @@
                     <Button x:Name="BtnCopy" Style="{StaticResource ToolButton}" Content="복사"
                             ToolTip="클립보드에만 넣는다. 파일로는 저장하지 않는다 (C)" Click="OnActionCopy"/>
                     <Button x:Name="BtnSave" Style="{StaticResource ToolButton}" Content="저장"
-                            ToolTip="파일로만 저장한다. 클립보드에는 안 넣는다 (S)" Click="OnActionSave"/>
+                            ToolTip="파일로만 저장한다. 클립보드에는 안 넣는다 (S · Space)" Click="OnActionSave"/>
                     <Button x:Name="BtnMagnet" Style="{StaticResource ToolButton}" Content="자석 맞춤"
                             ToolTip="현재 선택 안의 실제 콘텐츠 경계를 찾아 캡처 영역을 자동으로 맞춘다 (M)"
                             Click="OnAutoFitSelection"/>
                     <Rectangle x:Name="ActionSeparator" Style="{StaticResource ToolSeparator}"/>
                     <Button x:Name="BtnOk" Style="{StaticResource ToolButton}"
-                            ToolTip="설정대로 처리 (Enter · Space · 더블클릭)" Click="OnActionConfirm">
+                            ToolTip="설정대로 처리 (Enter · 더블클릭)" Click="OnActionConfirm">
                         <StackPanel Orientation="Horizontal">
                             <Path x:Name="ConfirmIcon" Style="{StaticResource Icon}"
                                   Data="{StaticResource IconCheck}"

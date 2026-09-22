@@ -369,7 +369,7 @@ namespace SnapView.Capture
             {
                 OverlayPurpose.Record => "이 영역을 녹화하기 시작한다 (Enter · Space · 더블클릭)",
                 _ => (confirmHint.Length > 0 ? confirmHint : "설정대로 처리") +
-                     "  (Enter · Space · 더블클릭)"
+                     "  (Enter · 더블클릭)"
             };
 
             BtnCancel.ToolTip = _purpose == OverlayPurpose.Record ? "녹화하지 않는다 (ESC)" : "취소 (ESC)";
@@ -635,6 +635,33 @@ namespace SnapView.Capture
         // S 처럼 오버레이가 열리기 전부터 눌려 있던 키의 뗌이 "파일로만 저장" 이 되면 곤란하다.
         private readonly HashSet<Key> _seenDown = new();
 
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            base.OnPreviewKeyDown(e);
+            if (e.Key != Key.Space) return;
+
+            // 툴바를 클릭하면 그 버튼에 포커스가 남는다. 버블링 KeyDown/KeyUp에서
+            // 처리하면 ButtonBase가 Space를 먼저 소비해 마지막 버튼을 다시 누른다.
+            // 누름부터 가로채되, 아래의 키 뗌까지 기다려 원래 앱으로 입력이 새지 않게 한다.
+            _seenDown.Add(Key.Space);
+            e.Handled = true;
+        }
+
+        protected override void OnPreviewKeyUp(KeyEventArgs e)
+        {
+            base.OnPreviewKeyUp(e);
+            if (e.Key != Key.Space) return;
+
+            // 닫기 전에 처리 표시를 해야 포커스가 있던 버튼이나 바탕 앱에 전달되지 않는다.
+            e.Handled = true;
+            if (!_seenDown.Remove(Key.Space)) return;
+            if (_phase != Phase.Adjusting) return;
+
+            Finish(_purpose == OverlayPurpose.Capture
+                ? OverlayAction.SaveOnly
+                : OverlayAction.Confirm);
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
             base.OnKeyDown(e);
@@ -680,9 +707,8 @@ namespace SnapView.Capture
             {
                 switch (e.Key)
                 {
-                    // 스페이스도 확인으로 친다. 영역을 잡은 손 그대로 누를 수 있는 자리다.
-                    case Key.Enter:
-                    case Key.Space: Finish(OverlayAction.Confirm); return;
+                    // Space는 버튼 포커스와 무관하게 PreviewKeyUp에서 따로 처리한다.
+                    case Key.Enter: Finish(OverlayAction.Confirm); return;
                     // 이 키들은 "찍을 때" 만 뜻이 있다. 녹화 중에 S 를 눌러 저장이 되면 이상하다.
                     case Key.E when _purpose == OverlayPurpose.Capture:
                         Finish(OverlayAction.Edit); return;
