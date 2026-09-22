@@ -21,6 +21,7 @@ internal static partial class SelfTest
         Check("Ctrl+Z 는 실행취소", R(Key.Z, ModifierKeys.Control, idle).Command == EditorCommand.Undo);
         Check("Ctrl+Shift+Z 는 다시실행", R(Key.Z, ModifierKeys.Control | ModifierKeys.Shift, idle).Command == EditorCommand.Redo);
         Check("Ctrl+Y 도 다시실행", R(Key.Y, ModifierKeys.Control, idle).Command == EditorCommand.Redo);
+        Check("Ctrl+S 는 이미지 저장", R(Key.S, ModifierKeys.Control, idle).Command == EditorCommand.Save);
         Check("Ctrl+Shift+S 는 프로젝트 저장", R(Key.S, ModifierKeys.Control | ModifierKeys.Shift, idle).Command == EditorCommand.SaveProject);
         Check("Ctrl+Shift+0 은 창에 맞춤", R(Key.D0, ModifierKeys.Control | ModifierKeys.Shift, idle).Command == EditorCommand.ZoomFit);
 
@@ -34,11 +35,14 @@ internal static partial class SelfTest
         KeyAction nudge = R(Key.Left, ModifierKeys.Shift, idle);
         Check("Shift+← 는 10px 이동", nudge.Command == EditorCommand.Nudge && nudge.Dx == -10 && nudge.Dy == 0);
 
-        // 입력칸에 포커스가 있으면 어떤 키도 편집기 명령이 아니다 — 색상판에 'a' 를 치면 도구가 바뀌던 문제.
+        // 저장 이외의 키는 입력칸 몫이다 — 색상판에 'a' 를 치면 도구가 바뀌던 문제.
         var typing = new EditorKeyState { FocusInTextInput = true };
         Check("입력칸 포커스면 글자 키를 안 가로챈다", R(Key.A, ModifierKeys.None, typing).Command == EditorCommand.None);
         Check("입력칸 포커스면 Backspace 도 안 가로챈다", R(Key.Back, ModifierKeys.None, typing).Command == EditorCommand.None);
         Check("입력칸 포커스면 Ctrl+Z 도 입력칸 몫", R(Key.Z, ModifierKeys.Control, typing).Command == EditorCommand.None);
+        Check("입력칸 포커스여도 Ctrl+S 는 저장", R(Key.S, ModifierKeys.Control, typing).Command == EditorCommand.Save);
+        Check("글자 편집 중 Ctrl+S 는 저장", R(Key.S, ModifierKeys.Control, new EditorKeyState { EditingText = true }).Command == EditorCommand.Save);
+        Check("글자 편집 중 Ctrl+Shift+S 는 프로젝트 저장", R(Key.S, ModifierKeys.Control | ModifierKeys.Shift, new EditorKeyState { EditingText = true }).Command == EditorCommand.SaveProject);
 
         // Ctrl+C 우선순위: 영역 > 주석 > 결과
         Check("영역이 있으면 영역 복사", R(Key.C, ModifierKeys.Control, new EditorKeyState { HasRegion = true, SelectionCount = 2 }).Command == EditorCommand.CopyRegion);

@@ -96,6 +96,7 @@ namespace SnapView.Editor
                 UpdateTitle();
 
                 _fitToWindow = true;
+                _imageSavePath = null;
                 Relayout();
                 Canvas1.InvalidateVisual();
                 UpdateStatus();
@@ -330,7 +331,8 @@ namespace SnapView.Editor
         }
 
         private void OnCopy(object sender, RoutedEventArgs e) => CopyResult();
-        private void OnSaveAs(object sender, RoutedEventArgs e) => SaveResult();
+        private void OnSave(object sender, RoutedEventArgs e) => SaveResult();
+        private void OnSaveAs(object sender, RoutedEventArgs e) => SaveResult(saveAs: true);
         private void OnDone(object sender, RoutedEventArgs e) => Done();
 
         private void CopyResult()
@@ -341,22 +343,43 @@ namespace SnapView.Editor
                 : "클립보드에 복사하지 못했습니다 — 다른 프로그램이 클립보드를 잡고 있습니다. 잠시 뒤 다시 시도하세요";
         }
 
-        private void SaveResult()
+        private void SaveResult(bool saveAs = false)
         {
             BitmapSource img = Flatten();
-            var dlg = new Microsoft.Win32.SaveFileDialog
+            string? path = _imageSavePath;
+            if (saveAs)
             {
-                Title = "주석 넣은 그림 저장",
-                Filter = "PNG 이미지|*.png|JPEG 이미지|*.jpg",
-                FileName = "SnapView_" + DateTime.Now.ToString("yyyy-MM-dd_HHmmss", CultureInfo.InvariantCulture),
-                DefaultExt = ".png"
-            };
-            if (dlg.ShowDialog() != true) return;
+                bool jpeg = path != null
+                    ? System.IO.Path.GetExtension(path).Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+                    : _settings.ImageFormat.Equals("jpg", StringComparison.OrdinalIgnoreCase);
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "주석 넣은 그림 저장",
+                    Filter = "PNG 이미지|*.png|JPEG 이미지|*.jpg",
+                    FilterIndex = jpeg ? 2 : 1,
+                    InitialDirectory = path != null ? System.IO.Path.GetDirectoryName(path)
+                        : string.IsNullOrWhiteSpace(_settings.SaveFolder) ? Settings.DefaultSaveFolder : _settings.SaveFolder,
+                    FileName = path != null ? System.IO.Path.GetFileName(path)
+                        : ImageIO.BuildName(_settings.FileNamePattern, DateTime.Now, null),
+                    DefaultExt = jpeg ? ".jpg" : ".png"
+                };
+                if (dlg.ShowDialog(this) != true) return;
+                path = dlg.FileName;
+            }
 
             try
             {
-                ImageIO.SaveTo(img, dlg.FileName, _settings.JpegQuality);
-                StHint.Text = "저장했습니다";
+                if (path == null)
+                    path = ImageIO.SaveAuto(img, _settings, DateTime.Now);
+                else
+                    ImageIO.Overwrite(img, path, _settings.JpegQuality);
+
+                // 쓰기에 성공한 뒤에만 저장 경로와 수정 상태를 갱신한다.
+                // 다음 Ctrl+S 는 같은 파일에 저장하고, 새 편집 전에는 닫기 확인을 띄우지 않는다.
+                _imageSavePath = path;
+                _dirty = false;
+                UpdateTitle();
+                StHint.Text = "저장했습니다 — " + path;
             }
             catch (Exception ex)
             {
@@ -479,6 +502,7 @@ namespace SnapView.Editor
                     Canvas1.Items.AddRange(items);
                     SetSelection(null);
                     _region = Rect.Empty;
+                    _imageSavePath = null;
                     _fitToWindow = true;
                     Relayout();
                     Canvas1.InvalidateVisual();

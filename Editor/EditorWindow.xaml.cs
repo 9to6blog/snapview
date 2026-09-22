@@ -46,6 +46,7 @@ namespace SnapView.Editor
         private long _savedStamp;
         private bool _completed;
         private string? _projectPath;
+        private string? _imageSavePath;
 
         // 몇 초마다 몰래 저장해 두는 복구 파일. 앱이 죽어도 다음에 이어서 할 수 있다.
         private readonly RecoveryStore _recovery = new();

@@ -24,7 +24,7 @@ namespace SnapView.Core
     /// <summary>키를 해석할 때 필요한 편집기 상태. 창이 채워서 넘긴다.</summary>
     internal sealed class EditorKeyState
     {
-        /// <summary>글자 입력칸이 떠 있다. 모든 키는 입력칸 몫.</summary>
+        /// <summary>글자 입력칸이 떠 있다. 저장 이외의 키는 입력칸 몫.</summary>
         internal bool EditingText { get; set; }
 
         /// <summary>굵기 칸·색상판 같은 입력칸에 포커스가 있다. 글자 키가 도구로 새면 안 된다.</summary>
@@ -44,7 +44,10 @@ namespace SnapView.Core
     {
         internal static KeyAction Resolve(Key key, ModifierKeys mods, EditorKeyState s)
         {
-            // 입력칸이 살아 있으면 편집기는 아무 키도 안 가로챈다.
+            // 저장은 입력 중인 글자까지 확정한다. 그 밖의 입력·실행취소는 입력칸 몫이다.
+            if (key == Key.S && (mods == ModifierKeys.Control || mods == (ModifierKeys.Control | ModifierKeys.Shift)))
+                return ResolveCtrl(key, (mods & ModifierKeys.Shift) != 0, s);
+
             if (s.EditingText || s.FocusInTextInput) return KeyAction.None;
 
             bool ctrl = (mods & ModifierKeys.Control) != 0;

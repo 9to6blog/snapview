@@ -302,7 +302,13 @@
                     <Button Style="{StaticResource ToolButton}" Content="복사"
                             ToolTip="Ctrl+C" Click="OnCopy"/>
                     <Button Style="{StaticResource ToolButton}" Content="저장"
-                            ToolTip="Ctrl+S" Click="OnSaveAs"/>
+                            ToolTip="저장 (Ctrl+S) · 처음 저장하면 기본 폴더에 저장 · 우클릭: 다른 이름으로 저장" Click="OnSave">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="다른 이름으로 저장..." Click="OnSaveAs"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                     <Button Style="{StaticResource ToolButton}"
                             ToolTip="설정대로 처리 (Ctrl+Enter)" Click="OnDone">
                         <StackPanel Orientation="Horizontal">
