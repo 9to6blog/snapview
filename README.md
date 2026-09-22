@@ -669,6 +669,9 @@ IID 와 vtable 슬롯은 추측이 아니라 실제 프로젝션 어셈블리를
 
 ## 빌드
 
+새 Windows 환경에서 도구 설치, 소스 복구, 검사와 배포를 이어 가는 순서는
+[포맷 후 개발 환경 복구](POST-FORMAT-RECOVERY.md)를 참고한다.
+
 ```
 build.bat              디버그 빌드
 build.bat release      릴리스 단일 exe (dist\SnapView.exe)
