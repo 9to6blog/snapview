@@ -335,6 +335,18 @@ namespace SnapView.Editor
         private void OnSaveAs(object sender, RoutedEventArgs e) => SaveResult(saveAs: true);
         private void OnDone(object sender, RoutedEventArgs e) => Done();
 
+        private void OnSaveOptions(object sender, RoutedEventArgs e)
+        {
+            var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = PlacementMode.Bottom };
+            var saveAs = new MenuItem { Header = "다른 이름으로 저장..." };
+            saveAs.Click += OnSaveAs;
+            menu.Items.Add(saveAs);
+            var project = new MenuItem { Header = "프로젝트로 저장 (.snapview)...", InputGestureText = "Ctrl+Shift+S" };
+            project.Click += (_, _) => SaveProject();
+            menu.Items.Add(project);
+            menu.IsOpen = true;
+        }
+
         private void CopyResult()
         {
             // 예전엔 실패해도 "복사했습니다" 라고 했다. 다른 프로그램이 클립보드를 잡고 있으면 실패한다.

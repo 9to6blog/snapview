@@ -747,7 +747,21 @@ namespace SnapView.Editor
             CounterPanel.Visibility = V(p.HasFlag(EditorPanel.Counter));
             CropPanel.Visibility = V(p.HasFlag(EditorPanel.Crop));
             RegionPanel.Visibility = V(p.HasFlag(EditorPanel.Region));
-            Row3Hint.Visibility = V(p == EditorPanel.None);
+            const EditorPanel detailPanels = EditorPanel.Font | EditorPanel.Mask | EditorPanel.MaskShape |
+                EditorPanel.Magnifier | EditorPanel.Counter | EditorPanel.Crop | EditorPanel.Region;
+            Row3Hint.Visibility = V((p & detailPanels) == 0);
+            Row3Hint.Text = _tool switch
+            {
+                ToolKind.Select => "선택 · 클릭으로 선택 · Shift+클릭으로 여러 개 선택 · 끌어서 이동",
+                ToolKind.Arrow => "화살표 · 끌어서 그리기 · Shift로 45° 고정 · Enter로 확정",
+                ToolKind.Line => "직선 · 끌어서 그리기 · Shift로 45° 고정 · Enter로 확정",
+                ToolKind.Pen => "펜 · 자유롭게 그리기 · Shift로 가로·세로 고정",
+                ToolKind.Highlighter => "형광펜 · 강조할 부분을 끌어 칠하기 · 글자는 그대로 보입니다",
+                ToolKind.Picker => "스포이드 · 이미지의 색을 클릭하면 이전 도구로 돌아갑니다",
+                ToolKind.Eraser => "지우개 · 주석 위를 끌어서 지우기 · 원본 이미지는 유지됩니다",
+                ToolKind.PixelEraser => "픽셀 지우개 · 이미지 자체를 투명하게 지웁니다 · Ctrl+Z로 되돌리기",
+                _ => "도형 · 끌어서 그리기 · Shift로 정비율 · Alt로 가운데에서 그리기 · Enter로 확정"
+            };
 
             // 2줄 가운데는 자리가 흔들리면 눈이 피곤하니 흐리게만 하고, 줄 끝의 묶음은 접는다.
             LineGroup.IsEnabled = p.HasFlag(EditorPanel.Line) || p.HasFlag(EditorPanel.Font);

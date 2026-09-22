@@ -28,7 +28,7 @@ namespace SnapView.Editor
         /// <summary>목록의 한 줄. 통째로 다시 만들지 않고 글자·색만 고칠 수 있게 조각을 들고 있는다.</summary>
         private sealed class LayerRow
         {
-            internal StackPanel Panel = null!;
+            internal Grid Panel = null!;
             internal CheckBox Eye = null!;
             internal Border Chip = null!;
             internal TextBlock Label = null!;
@@ -106,7 +106,12 @@ namespace SnapView.Editor
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
 
-            var panel = new StackPanel { Orientation = Orientation.Horizontal, Tag = a };
+            var panel = new Grid { Tag = a, Margin = new Thickness(0, 3, 0, 3) };
+            panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(chip, 1);
+            Grid.SetColumn(label, 2);
             panel.Children.Add(eye);
             panel.Children.Add(chip);
             panel.Children.Add(label);
@@ -120,6 +125,7 @@ namespace SnapView.Editor
             row.Chip.Background = new SolidColorBrush(a.Color);
             row.Label.Text = $"{index + 1}. " + (a.Locked ? "(잠김) " : "") +
                              (string.IsNullOrWhiteSpace(a.Name) ? DescribeLayer(a) : a.Name);
+            row.Label.ToolTip = row.Label.Text;
             row.Label.Opacity = a.Locked ? 0.6 : 1.0;
         }
 

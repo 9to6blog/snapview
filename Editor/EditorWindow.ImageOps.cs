@@ -122,33 +122,7 @@ namespace SnapView.Editor
         private void OnRotateRight(object sender, RoutedEventArgs e) => Rotate(true);
         private void OnRotateLeft(object sender, RoutedEventArgs e) => Rotate(false);
 
-        /// <summary>자주 안 쓰는 이미지 조작은 메뉴로 접어 둔다. 리본이 넘치면 못 찾는다.</summary>
-        private void OnImageMenu(object sender, RoutedEventArgs e)
-        {
-            var menu = new ContextMenu
-            {
-                PlacementTarget = BtnImageMenu,
-                Placement = PlacementMode.Bottom
-            };
-
-            void Add(string header, Action action)
-            {
-                var item = new MenuItem { Header = header };
-                item.Click += (_, _) => action();
-                menu.Items.Add(item);
-            }
-
-            Add("좌우 뒤집기 (Shift+H)", () => Flip(true));
-            Add("상하 뒤집기 (Shift+V)", () => Flip(false));
-            menu.Items.Add(new Separator());
-            Add("오른쪽으로 90도 (Ctrl+R)", () => Rotate(true));
-            Add("왼쪽으로 90도 (Ctrl+Shift+R)", () => Rotate(false));
-            menu.Items.Add(new Separator());
-            Add("이미지 크기 조절(확대·축소)...", () => OnResizeCanvas(this, new RoutedEventArgs()));
-            Add("캔버스 여백 늘리기...", ExpandCanvas);
-
-            menu.IsOpen = true;
-        }
+        private void OnExpandCanvas(object sender, RoutedEventArgs e) => ExpandCanvas();
 
         /// <summary>
         /// 캔버스에 여백을 붙인다 — 그림은 그대로 두고 <b>공간만</b> 늘린다.
