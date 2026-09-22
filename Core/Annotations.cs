@@ -201,6 +201,7 @@ namespace SnapView.Core
             Annotation ghost = Clone();
             ghost.Shadow = false;
             ghost.Color = Color.FromRgb(10, 10, 12);
+            if (ghost is ShapeAnnotation shape) shape.FillColor = ghost.Color;
             double off = Math.Max(2.5, Thickness * 0.9);
             ghost.Move(new Vector(off, off));
 
@@ -349,6 +350,8 @@ namespace SnapView.Core
         internal Point Start { get; set; }
         internal Point End { get; set; }
         internal bool Filled { get; set; }
+        // null keeps older projects using their original outline color for the fill.
+        internal Color? FillColor { get; set; }
 
         /// <summary>화살표 양 끝에 촉을 단다(구간 표시용). 화살표일 때만 뜻이 있다.</summary>
         internal bool BothArrows { get; set; }
@@ -406,7 +409,7 @@ namespace SnapView.Core
         protected override Annotation CloneCore() => new ShapeAnnotation
         {
             Kind = Kind, Start = Start, End = End, Filled = Filled, BothArrows = BothArrows,
-            GradientFill = GradientFill, Head = Head,
+            GradientFill = GradientFill, FillColor = FillColor, Head = Head,
             Color = Color, Thickness = Thickness, Opacity = Opacity, Shadow = Shadow
         };
 
@@ -424,7 +427,7 @@ namespace SnapView.Core
             Rect area = Bounds;
             area.Inflate(Thickness + 2, Thickness + 2);
 
-            string key = $"{Start}|{End}|{Color}|{Thickness}|{Filled}|{GradientFill}|" +
+            string key = $"{Start}|{End}|{Color}|{FillColor}|{Thickness}|{Filled}|{GradientFill}|" +
                          $"{Dashed}|{DashPattern}|{Kind}|{Blend}|{BothArrows}|{Head}|{source.GetHashCode()}";
             if (_blendCache == null || _blendKey != key)
             {
@@ -442,10 +445,11 @@ namespace SnapView.Core
             Brush? fill = null;
             if (Filled)
             {
+                Color color = FillColor ?? Color;
                 fill = GradientFill
-                    ? new LinearGradientBrush(Color,
-                        Color.FromArgb((byte)(Color.A / 6), Color.R, Color.G, Color.B), 90)
-                    : new SolidColorBrush(Color);
+                    ? new LinearGradientBrush(color,
+                        Color.FromArgb((byte)(color.A / 6), color.R, color.G, color.B), 90)
+                    : new SolidColorBrush(color);
                 fill.Freeze();
             }
 
@@ -489,7 +493,7 @@ namespace SnapView.Core
             if (len < 1) return;
 
             v.Normalize();
-            double head = Math.Max(Thickness * 3.2, 12);
+            double head = Math.Max(3.2, Thickness * 3.2);
             head = Math.Min(head, len * (BothArrows ? 0.4 : 0.55));
 
             var brush = new SolidColorBrush(Color);
@@ -497,7 +501,7 @@ namespace SnapView.Core
 
             // 촉이 덮을 부분만큼 몸통을 짧게 그려야 선이 촉 밖으로 삐져나오지 않는다.
             // 열린 촉은 몸통이 끝까지 가고, 점 촉은 점 반지름만큼만 비운다.
-            double dotR = Math.Max(Thickness * 1.6, 5);
+            double dotR = Math.Max(1.6, Thickness * 1.6);
             double back = Head switch
             {
                 ArrowHead.Open => 0,
@@ -627,7 +631,7 @@ namespace SnapView.Core
 
             Rect area = Bounds;
             area.Inflate(Thickness * 5, Thickness * 5);
-            string key = $"{Points.Count}|{Points[0]}|{Points[^1]}|{Color}|{Thickness}|{Blend}|{Dashed}|{source.GetHashCode()}";
+            string key = $"{Points.Count}|{Points[0]}|{Points[^1]}|{Color}|{Thickness}|{Blend}|{Dashed}|{DashPattern}|{source.GetHashCode()}";
             if (_blendCache == null || _blendKey != key)
             {
                 _blendCache = BlendComposite.Compose(source, area, Blend, RenderVector, out _blendRect);
@@ -859,6 +863,7 @@ namespace SnapView.Core
     internal sealed class PixelateAnnotation : Annotation
     {
         private BitmapSource? _cache;
+        private BitmapSource? _cacheSource;
         private Rect _cacheRect = Rect.Empty;
         private int _cacheStrength = -1;
         private bool _cacheBlur;
@@ -936,7 +941,7 @@ namespace SnapView.Core
             if (b.Width < 2 || b.Height < 2) return;
 
             if (_cache == null || _cacheRect != b || _cacheStrength != Strength ||
-                _cacheBlur != UseBlur || _cacheFast != Fast)
+                _cacheBlur != UseBlur || _cacheFast != Fast || !ReferenceEquals(_cacheSource, source))
             {
                 var region = new Int32Rect((int)Math.Round(b.X), (int)Math.Round(b.Y),
                                            Math.Max(1, (int)Math.Round(b.Width)),
@@ -946,6 +951,7 @@ namespace SnapView.Core
                 _cacheStrength = Strength;
                 _cacheBlur = UseBlur;
                 _cacheFast = Fast;
+                _cacheSource = source;
             }
 
             if (_cache == null) return;
@@ -1206,6 +1212,16 @@ namespace SnapView.Core
             Radius = Math.Max(6, Radius * (fx + fy) / 2);
         }
 
+        internal void EnsureVisibleArrow(Vector fallback)
+        {
+            Vector offset = Center - Tip;
+            double minimum = Radius + Math.Max(28, Thickness * 8);
+            if (offset.Length >= minimum) return;
+            if (offset.Length < 1) offset = fallback.Length >= 1 ? fallback : new Vector(1, -1);
+            offset.Normalize();
+            Center = Tip + offset * minimum;
+        }
+
         // 0 = 화살촉, 1 = 번호 원
         internal override IReadOnlyList<Point> Handles() => new[] { Tip, Center };
 
@@ -1263,7 +1279,7 @@ namespace SnapView.Core
                 Vector unit = v; unit.Normalize();
                 Point from = Center + unit * Radius;
 
-                double head = Math.Max(Thickness * 3.0, 11);
+                double head = Math.Max(3.2, Thickness * 3.2);
                 head = Math.Min(head, (len - Radius) * 0.6);
 
                 var pen = new Pen(fill, Math.Max(2, Thickness))
@@ -1391,9 +1407,12 @@ namespace SnapView.Core
 
         /// <summary>원본에서 집는 반지름(이미지 픽셀).</summary>
         internal double Radius { get; set; } = 45;
-        internal double Zoom { get; set; } = 2;
-
-        private double DisplayRadius => Radius * Zoom;
+        internal double DisplayRadius { get; set; } = 90;
+        internal double Zoom
+        {
+            get => DisplayRadius / Math.Max(1, Radius);
+            set => DisplayRadius = Math.Max(0.1, Radius * value);
+        }
 
         internal override Rect Bounds => new(
             Center.X - DisplayRadius, Center.Y - DisplayRadius,
@@ -1418,16 +1437,19 @@ namespace SnapView.Core
         {
             base.Scale(fx, fy);
             Radius = Math.Max(8, Radius * (fx + fy) / 2);
+            DisplayRadius = Math.Max(8, DisplayRadius * (fx + fy) / 2);
         }
 
-        // 0 = 창 크기 조절(동쪽 가장자리), 1 = 확대할 곳 옮기기
+        // 0 = 확대 창 크기, 1 = 원본 중심, 2 = 원본 범위 크기 (서로 독립)
         internal override IReadOnlyList<Point> Handles()
-            => new[] { new Point(Center.X + DisplayRadius, Center.Y), SourceCenter };
+            => new[] { new Point(Center.X + DisplayRadius, Center.Y), SourceCenter,
+                       new Point(SourceCenter.X + Radius, SourceCenter.Y) };
 
         internal override void DragHandle(int index, Point p)
         {
-            if (index == 0) Radius = Math.Max(8, (p - Center).Length / Math.Max(1, Zoom));
-            else SourceCenter = p;
+            if (index == 0) DisplayRadius = Math.Max(8, (p - Center).Length);
+            else if (index == 1) SourceCenter = p;
+            else if (index == 2) Radius = Math.Max(8, (p - SourceCenter).Length);
         }
 
         internal override bool HitTest(Point p)
@@ -1435,7 +1457,7 @@ namespace SnapView.Core
 
         protected override Annotation CloneCore() => new MagnifierAnnotation
         {
-            SourceCenter = SourceCenter, Center = Center, Radius = Radius, Zoom = Zoom,
+            SourceCenter = SourceCenter, Center = Center, Radius = Radius, DisplayRadius = DisplayRadius,
             Color = Color, Thickness = Thickness, Opacity = Opacity, Shadow = Shadow
         };
 
@@ -1538,18 +1560,28 @@ namespace SnapView.Core
         {
             IReadOnlyList<Annotation> list = items as IReadOnlyList<Annotation> ?? new List<Annotation>(items);
 
+            var layers = new DrawingGroup();
+            bool hasLayers = false;
             for (int i = 0; i < list.Count; i++)
             {
                 Annotation a = list[i];
-                if (a is EraseAnnotation) continue;      // 지우개 자국 자체는 안 그린다
+                if (!a.Visible || a is EraseAnnotation) continue;
 
-                Geometry? hole = HolesAfter(list, i, source);
-                if (hole != null) dc.PushClip(hole);
-
-                Draw(dc, a, source);
-
-                if (hole != null) dc.Pop();
+                // Sampling tools see the visible layers beneath them. Reading the original
+                // here would undo a mosaic when blur or a magnifier is added on top.
+                BitmapSource input = hasLayers && (a is PixelateAnnotation or MagnifierAnnotation ||
+                    a.SupportsBlend && a.Blend != BlendMode.Normal)
+                    ? Composite(source, layers) : source;
+                using (DrawingContext layer = layers.Append())
+                {
+                    Geometry? hole = HolesAfter(list, i, source);
+                    if (hole != null) layer.PushClip(hole);
+                    Draw(layer, a, input);
+                    if (hole != null) layer.Pop();
+                }
+                hasLayers = true;
             }
+            dc.DrawDrawing(layers);
         }
 
         /// <summary>
@@ -1577,6 +1609,20 @@ namespace SnapView.Core
             var clipped = new CombinedGeometry(GeometryCombineMode.Exclude, canvas, holes);
             clipped.Freeze();
             return clipped;
+        }
+
+        private static BitmapSource Composite(BitmapSource source, Drawing layers)
+        {
+            var visual = new DrawingVisual();
+            using (DrawingContext dc = visual.RenderOpen())
+            {
+                dc.DrawImage(source, new Rect(0, 0, source.PixelWidth, source.PixelHeight));
+                dc.DrawDrawing(layers);
+            }
+            var bitmap = new RenderTargetBitmap(source.PixelWidth, source.PixelHeight, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(visual);
+            bitmap.Freeze();
+            return bitmap;
         }
 
         /// <summary>원본 해상도 그대로 한 장으로 합친다.</summary>

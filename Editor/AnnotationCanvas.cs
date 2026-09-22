@@ -46,6 +46,8 @@ namespace SnapView.Editor
         /// <summary>끌기 스냅이 잡은 기준선(스마트 가이드). null 이면 안 그린다.</summary>
         internal double? GuideX { get; set; }
         internal double? GuideY { get; set; }
+        internal List<EditorGuide> ManualGuides { get; } = new();
+        internal bool ShowManualGuides { get; set; }
 
         /// <summary>자동 선택이 고른 영역의 표시(파란 물들임). null 이면 없음.</summary>
         internal BitmapSource? SelectionTint { get; set; }
@@ -89,8 +91,9 @@ namespace SnapView.Editor
 
                 // 최종 결과와 같은 경로로 그린다. 여기서 갈라지면 투명도 같은 것이
                 // 화면에는 안 보이고 저장할 때만 먹는 상황이 생긴다.
-                AnnotationRenderer.Draw(dc, Items, Source);
-                if (Active != null) AnnotationRenderer.Draw(dc, Active, Source);
+                var scene = new List<Annotation>(Items);
+                if (Active != null) scene.Add(Active);
+                AnnotationRenderer.Draw(dc, scene, Source);
 
                 if (Region.Width >= 1 && Region.Height >= 1) DrawRegion(dc);
 
@@ -125,6 +128,18 @@ namespace SnapView.Editor
                     };
                     pen.Freeze();
                     dc.DrawRectangle(null, pen, RubberBand);
+                }
+
+                if (ShowManualGuides)
+                {
+                    var pen = new Pen(Brushes.DeepSkyBlue, 1 / _scale);
+                    dc.PushClip(new RectangleGeometry(new Rect(0, 0, ImageWidth, ImageHeight)));
+                    foreach (EditorGuide guide in ManualGuides)
+                    {
+                        if (guide.Horizontal) dc.DrawLine(pen, new Point(0, guide.Position), new Point(ImageWidth, guide.Position));
+                        else dc.DrawLine(pen, new Point(guide.Position, 0), new Point(guide.Position, ImageHeight));
+                    }
+                    dc.Pop();
                 }
 
                 // 스마트 가이드: 스냅이 잡은 기준선을 화면 끝까지 긋는다(분홍).

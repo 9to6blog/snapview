@@ -39,6 +39,17 @@
     <Geometry x:Key="EditDelete">M 3,6 H 21 M 8,6 V 2 H 16 V 6 M 5,6 L 6,22 H 18 L 19,6 M 10,10 V 18 M 14,10 V 18</Geometry>
     <Geometry x:Key="EditHelp">M 12,2 A 10,10 0 1 1 11.99,2 M 8,8 C 8,3 17,4 16,9 C 16,11 12,11 12,15 M 12,18 V 18.5</Geometry>
 
+    <Geometry x:Key="EditSaveAs">M 3,2 H 16 L 21,7 V 12 M 3,2 V 22 H 11 M 7,2 V 9 H 16 V 2 M 12,20 L 20,12 L 23,15 L 15,23 H 12 Z</Geometry>
+    <Geometry x:Key="EditRuler">M 2,6 H 22 V 18 H 2 Z M 6,6 V 12 M 10,6 V 10 M 14,6 V 12 M 18,6 V 10</Geometry>
+    <Geometry x:Key="EditClearGuides">M 7,2 V 22 M 2,7 H 22 M 14,14 L 22,22 M 22,14 L 14,22</Geometry>
+    <Geometry x:Key="EditAlign">M 3,2 V 22 M 6,4 H 22 V 9 H 6 Z M 6,14 H 16 V 19 H 6 Z</Geometry>
+    <DataTemplate x:Key="EditorMenuContent">
+        <StackPanel Orientation="Horizontal">
+            <Path Style="{DynamicResource EditorGlyph}" Margin="0,0,5,0"/>
+            <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+            <Path Data="M 1,2 L 5,6 L 9,2" Width="8" Height="5" Stretch="Uniform" StrokeThickness="1.4" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type p:ButtonBase}}}" Margin="7,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+    </DataTemplate>
     <Style x:Key="EditorGlyph" TargetType="Path">
         <Setter Property="Data" Value="{Binding Path=(ed:ToolbarIcon.Data), RelativeSource={RelativeSource AncestorType={x:Type p:ButtonBase}}}"/>
         <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type p:ButtonBase}}}"/>
@@ -47,8 +58,8 @@
         <Setter Property="StrokeEndLineCap" Value="Round"/>
         <Setter Property="StrokeLineJoin" Value="Round"/>
         <Setter Property="Stretch" Value="Uniform"/>
-        <Setter Property="Width" Value="17"/>
-        <Setter Property="Height" Value="17"/>
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <DataTemplate x:Key="EditorIconAndText">
@@ -62,13 +73,13 @@
     </DataTemplate>
     <DataTemplate x:Key="EditorToolContent">
         <StackPanel>
-            <Path Style="{StaticResource EditorGlyph}" Width="19" Height="19" HorizontalAlignment="Center"/>
-            <TextBlock Text="{Binding}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+            <Path Style="{StaticResource EditorGlyph}" Width="16" Height="16" HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding}" HorizontalAlignment="Center" Margin="0,3,0,0"/>
         </StackPanel>
     </DataTemplate>
     <Style x:Key="EditorAction" TargetType="Button" BasedOn="{StaticResource ToolButton}">
-        <Setter Property="Height" Value="32"/>
-        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="Padding" Value="6,3"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="ContentTemplate" Value="{StaticResource EditorIconAndText}"/>
@@ -92,8 +103,8 @@
         </Setter>
     </Style>
     <Style x:Key="EditorIconButton" TargetType="Button" BasedOn="{StaticResource EditorAction}">
-        <Setter Property="Width" Value="32"/>
-        <Setter Property="Padding" Value="6"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Padding" Value="4"/>
         <Setter Property="ContentTemplate" Value="{StaticResource EditorIconOnly}"/>
     </Style>
     <Style x:Key="EditorPrimaryAction" TargetType="Button" BasedOn="{StaticResource EditorAction}">
@@ -102,11 +113,11 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style x:Key="EditorTool" TargetType="ToggleButton" BasedOn="{StaticResource ToolToggle}">
-        <Setter Property="Width" Value="54"/>
-        <Setter Property="Height" Value="44"/>
-        <Setter Property="Padding" Value="2,4"/>
+        <Setter Property="Width" Value="50"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Padding" Value="1,2"/>
         <Setter Property="Margin" Value="1,1"/>
-        <Setter Property="FontSize" Value="10.5"/>
+        <Setter Property="FontSize" Value="10"/>
         <Setter Property="ContentTemplate" Value="{StaticResource EditorToolContent}"/>
         <Setter Property="AutomationProperties.Name" Value="{Binding Content, RelativeSource={RelativeSource Self}}"/>
         <Setter Property="ToolTipService.InitialShowDelay" Value="350"/>
@@ -132,15 +143,15 @@
     </Style>
     <Style x:Key="EditorToggleAction" TargetType="ToggleButton" BasedOn="{StaticResource EditorTool}">
         <Setter Property="Width" Value="Auto"/>
-        <Setter Property="Height" Value="32"/>
-        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="Padding" Value="6,3"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="ContentTemplate" Value="{StaticResource EditorIconAndText}"/>
     </Style>
     <Style x:Key="EditorGroupCaption" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource FgDim}"/>
-        <Setter Property="FontSize" Value="10.5"/>
-        <Setter Property="Margin" Value="7,6,0,4"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="Margin" Value="5,5,0,3"/>
     </Style>
     <Style x:Key="EditorActionGroup" TargetType="StackPanel">
         <Setter Property="Orientation" Value="Horizontal"/>

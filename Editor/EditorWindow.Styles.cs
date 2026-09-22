@@ -74,18 +74,10 @@ namespace SnapView.Editor
         private void OnGradientToggled(object sender, RoutedEventArgs e)
         {
             _gradient = TbGradient.IsChecked == true;
+            if (_gradient) { _filled = true; TbFill.IsChecked = true; }
             ApplyStyleToEditable(a =>
             {
-                if (a is ShapeAnnotation s && s.CanFill) s.GradientFill = _gradient;
-            });
-        }
-
-        private void OnDashToggled(object sender, RoutedEventArgs e)
-        {
-            _dashed = TbDash.IsChecked == true;
-            ApplyStyleToEditable(a =>
-            {
-                if (a is ShapeAnnotation or PathAnnotation) a.Dashed = _dashed;
+                if (a is ShapeAnnotation s && s.CanFill) { s.GradientFill = _gradient; if (_gradient) s.Filled = true; }
             });
         }
 
@@ -197,8 +189,12 @@ namespace SnapView.Editor
         private void OnDashPatternChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_syncingUi || DashPatternBox.SelectedIndex < 0) return;
-            _dashPattern = (DashPattern)Math.Clamp(DashPatternBox.SelectedIndex, 0, 2);
-            ApplyStyleToEditable(a => { if (a is ShapeAnnotation or PathAnnotation) a.DashPattern = _dashPattern; });
+            _dashed = DashPatternBox.SelectedIndex > 0;
+            _dashPattern = (DashPattern)Math.Clamp(DashPatternBox.SelectedIndex - 1, 0, 2);
+            ApplyStyleToEditable(a =>
+            {
+                if (a is ShapeAnnotation or PathAnnotation) { a.Dashed = _dashed; a.DashPattern = _dashPattern; }
+            });
         }
 
         private void OnAlignClick(object sender, RoutedEventArgs e)
@@ -250,7 +246,9 @@ namespace SnapView.Editor
         {
             if (_syncingUi || MagnifierZoomBox.SelectedIndex < 0) return;
             _magnifierZoom = MagnifierZooms[Math.Clamp(MagnifierZoomBox.SelectedIndex, 0, MagnifierZooms.Length - 1)];
-            ApplyStyleToEditable(a => { if (a is MagnifierAnnotation m) m.Zoom = _magnifierZoom; });
+            _magnifierDisplayRadius = _magnifierSourceRadius * _magnifierZoom;
+            ApplyStyleToEditable(a => { if (a is MagnifierAnnotation m) m.DisplayRadius = _magnifierDisplayRadius; });
+            MagnifierDisplayBox.SetSilently(_magnifierDisplayRadius * 2);
         }
 
         /// <summary>다음 번호. 번호 하나를 골라 둔 상태면 그 번호를 바꾼다.</summary>
@@ -328,8 +326,8 @@ namespace SnapView.Editor
                 if (a.SupportsOpacity) { _opacity = a.Opacity; OpacityBox.SetSilently(Math.Round(_opacity * 100)); }
                 if (a is ShapeAnnotation or PathAnnotation)
                 {
-                    _dashed = a.Dashed; TbDash.IsChecked = _dashed;
-                    _dashPattern = a.DashPattern; DashPatternBox.SelectedIndex = (int)_dashPattern;
+                    _dashed = a.Dashed;
+                    _dashPattern = a.DashPattern; DashPatternBox.SelectedIndex = _dashed ? (int)_dashPattern + 1 : 0;
                 }
                 if (a.SupportsShadow) { _shadow = a.Shadow; TbShadow.IsChecked = _shadow; }
                 if (a.SupportsBlend) { _blend = a.Blend; BlendBox.SelectedIndex = (int)_blend; }
@@ -337,7 +335,7 @@ namespace SnapView.Editor
                 switch (a)
                 {
                     case ShapeAnnotation s:
-                        if (s.CanFill) { _filled = s.Filled; TbFill.IsChecked = _filled; _gradient = s.GradientFill; TbGradient.IsChecked = _gradient; }
+                        if (s.CanFill) { _fillColor = s.FillColor ?? s.Color; ShowFillColor(); _filled = s.Filled; TbFill.IsChecked = _filled; _gradient = s.GradientFill; TbGradient.IsChecked = _gradient; }
                         if (s.Kind == ToolKind.Arrow)
                         {
                             _bothArrows = s.BothArrows; TbBothArrows.IsChecked = _bothArrows;
@@ -364,7 +362,8 @@ namespace SnapView.Editor
                         break;
                     case MagnifierAnnotation m:
                         _magnifierZoom = m.Zoom;
-                        MagnifierZoomBox.SelectedIndex = Math.Max(0, Array.IndexOf(MagnifierZooms, m.Zoom));
+                        _magnifierSourceRadius = m.Radius; _magnifierDisplayRadius = m.DisplayRadius;
+                        UpdateMagnifierControls();
                         break;
                     case CounterAnnotation c: NextNumberBox.SetSilently(c.Number); break;
                     case NumberArrowAnnotation na: NextNumberBox.SetSilently(na.Number); break;

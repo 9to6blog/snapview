@@ -79,14 +79,13 @@ internal static partial class SelfTest
         Check("돋보기 창 밖은 원래 그림(파랑)", c2.B > 180 && c2.R < 90, c2.ToString());
 
         mag.DragHandle(0, new Point(60 + 30, 40));   // 창 가장자리를 끌어 키우면
-        Check("창 크기 조절점: 반지름이 따라간다", Math.Abs(mag.Radius - 15) < 0.5,
-              mag.Radius.ToString("0.0"));
+        Check("창 크기 조절점: 창만 커지고 원본 범위 유지", mag.DisplayRadius == 30 && mag.Radius == 8);
         mag.DragHandle(1, new Point(25, 30));
         Check("잡는 곳 조절점: 확대 대상이 옮겨진다", mag.SourceCenter == new Point(25, 30));
 
         var mClone = (MagnifierAnnotation)mag.Clone();
         Check("돋보기 복제가 배율·반지름을 지킨다",
-              Math.Abs(mClone.Zoom - 2) < 0.01 && Math.Abs(mClone.Radius - mag.Radius) < 0.01);
+              Math.Abs(mClone.Zoom - mag.Zoom) < 0.01 && Math.Abs(mClone.Radius - mag.Radius) < 0.01);
 
         mag.Rotate90(clockwise: true, 80, 80);
         Check("돋보기 회전에도 두 점이 함께 돈다",
@@ -443,10 +442,10 @@ internal static partial class SelfTest
         BitmapSource a1 = AnnotationRenderer.Flatten(SolidGif(80, 40, Colors.White), new[] { one });
         BitmapSource a2 = AnnotationRenderer.Flatten(SolidGif(80, 40, Colors.White), new[] { both });
 
-        // 시작점 쪽 촉 삼각형 안(20,17) — 몸통(y 18.5~21.5) 밖이라 한쪽 화살표에는 없다
-        Check("한쪽 화살표: 시작점 위는 비어 있다", PixelAtRgb(a1, 20, 17).B > 240);
-        Check("양촉: 시작점에도 촉이 달린다", PixelAtRgb(a2, 20, 17).B > 150 &&
-                                              PixelAtRgb(a2, 20, 17).R < 120);
+        // 굵기 3의 촉 길이 9.6px 안쪽, 몸통 밖을 검사한다.
+        Check("한쪽 화살표: 시작점 위는 비어 있다", PixelAtRgb(a1, 18, 17).R > 240);
+        Check("양촉: 시작점에도 촉이 달린다", PixelAtRgb(a2, 18, 17).B > 150 &&
+                                              PixelAtRgb(a2, 18, 17).R < 120);
         Check("복제가 양촉을 지킨다", ((ShapeAnnotation)both.Clone()).BothArrows);
     }
 

@@ -311,11 +311,11 @@ namespace SnapView.Editor
                 var mag = (MagnifierAnnotation)Init(new MagnifierAnnotation
                 {
                     SourceCenter = p,
-                    Radius = 42,
-                    Zoom = _magnifierZoom
+                    Radius = _magnifierSourceRadius,
+                    DisplayRadius = _magnifierDisplayRadius
                 });
 
-                double dr = 42 * mag.Zoom;
+                double dr = mag.DisplayRadius;
                 var want = new Point(p.X + dr + 46, p.Y - dr - 26);
                 mag.Center = new Point(
                     Math.Clamp(want.X, dr, Math.Max(dr, Canvas1.ImageWidth - dr)),
@@ -467,7 +467,9 @@ namespace SnapView.Editor
                     break;
 
                 case NumberArrowAnnotation na:
+                    Vector direction = na.Center - na.Tip;
                     na.Center = p;
+                    na.EnsureVisibleArrow(direction);
                     break;
 
                 case ShapeAnnotation shape:
@@ -640,12 +642,20 @@ namespace SnapView.Editor
             ToolKind.Crop => new CropAnnotation { Start = p, End = p },
             ToolKind.Spotlight => Init(new SpotlightAnnotation { Start = p, End = p, Shape = _maskShape }),
             // 화살촉을 가리킬 곳에 대고 끌면 번호 원이 딸려 나온다.
-            ToolKind.NumberArrow => Init(new NumberArrowAnnotation
-            {
-                Tip = p, Center = p, Number = _counter, Radius = Math.Max(12, _thickness * 5)
-            }),
+            ToolKind.NumberArrow => CreateNumberArrow(p),
             _ => Init(new ShapeAnnotation { Kind = _tool, Start = p, End = p })
         };
+
+        private Annotation CreateNumberArrow(Point p)
+        {
+            var arrow = (NumberArrowAnnotation)Init(new NumberArrowAnnotation
+            {
+                Tip = p, Center = p, Number = _counter, Radius = Math.Max(12, _thickness * 5)
+            });
+            arrow.EnsureVisibleArrow(new Vector(p.X < Canvas1.ImageWidth / 2 ? 1 : -1,
+                                                p.Y < Canvas1.ImageHeight / 2 ? 1 : -1));
+            return arrow;
+        }
 
         private Annotation Init(Annotation a)
         {
@@ -659,7 +669,7 @@ namespace SnapView.Editor
             if (a is ShapeAnnotation or PathAnnotation) { a.Dashed = _dashed; a.DashPattern = _dashPattern; }
             if (a is ShapeAnnotation s)
             {
-                if (CanFill(s.Kind)) { s.Filled = _filled; s.GradientFill = _gradient; }
+                if (CanFill(s.Kind)) { s.Filled = _filled; s.GradientFill = _gradient; s.FillColor = _fillColor; }
                 if (s.Kind == ToolKind.Arrow) { s.BothArrows = _bothArrows; s.Head = _head; }
             }
             return a;

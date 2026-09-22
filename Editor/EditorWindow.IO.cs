@@ -28,7 +28,7 @@ namespace SnapView.Editor
                 Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom
             };
 
-            var save = new MenuItem { Header = "프로젝트로 저장 (.snapview)..." };
+            var save = new MenuItem { Header = "프로젝트로 저장 (.snapview)...", InputGestureText = "Ctrl+Shift+S" };
             save.Click += (_, _) => SaveProject();
             menu.Items.Add(save);
 
@@ -210,7 +210,8 @@ namespace SnapView.Editor
                 Minimum = 5, Maximum = 100, Step = 5, Suffix = "%",
                 Width = 100, Height = 26
             };
-            strength.SetSilently(50);
+            double initialStrength = filter == ImageEffects.ImageFilter.Grayscale ? 100 : 50;
+            strength.SetSilently(initialStrength);
             strength.ValueChanged += v => PreviewFilter(v / 100.0);
 
             var apply = new Button { Content = "적용", MinWidth = 54, Margin = new Thickness(6, 0, 0, 0) };
@@ -259,7 +260,7 @@ namespace SnapView.Editor
             };
 
             _filterPopup.IsOpen = true;
-            PreviewFilter(0.5);
+            PreviewFilter(initialStrength / 100.0);
         }
 
         /// <summary>강도를 바꿀 때마다 원본에서 다시 계산해 화면에만 보여 준다.</summary>
@@ -335,18 +336,6 @@ namespace SnapView.Editor
         private void OnSaveAs(object sender, RoutedEventArgs e) => SaveResult(saveAs: true);
         private void OnDone(object sender, RoutedEventArgs e) => Done();
 
-        private void OnSaveOptions(object sender, RoutedEventArgs e)
-        {
-            var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = PlacementMode.Bottom };
-            var saveAs = new MenuItem { Header = "다른 이름으로 저장..." };
-            saveAs.Click += OnSaveAs;
-            menu.Items.Add(saveAs);
-            var project = new MenuItem { Header = "프로젝트로 저장 (.snapview)...", InputGestureText = "Ctrl+Shift+S" };
-            project.Click += (_, _) => SaveProject();
-            menu.Items.Add(project);
-            menu.IsOpen = true;
-        }
-
         private void CopyResult()
         {
             // 예전엔 실패해도 "복사했습니다" 라고 했다. 다른 프로그램이 클립보드를 잡고 있으면 실패한다.
@@ -421,6 +410,7 @@ namespace SnapView.Editor
             _settings.MosaicBlockSize = _maskStrength;
             _settings.AnnotationOpacity = _opacity;
             _settings.AnnotationFilled = _filled;
+            _settings.AnnotationFillColor = _fillColor.ToString();
             _settings.AnnotationFontFamily = _fontFamily;
             _settings.AnnotationTool = RememberableTool(_tool).ToString();
             _settings.RecentColors = RecentColors.Serialize(_recentColors);

@@ -56,6 +56,7 @@ namespace SnapView.Core
 
             public string? Kind { get; set; }
             public bool? Filled { get; set; }
+            public string? FillColor { get; set; }
             public bool? BothArrows { get; set; }
             public bool? GradientFill { get; set; }
             public string? Blend { get; set; }
@@ -159,6 +160,7 @@ namespace SnapView.Core
                     it.Kind = s.Kind.ToString();
                     (it.X1, it.Y1, it.X2, it.Y2) = (s.Start.X, s.Start.Y, s.End.X, s.End.Y);
                     it.Filled = s.Filled;
+                    it.FillColor = s.FillColor?.ToString();
                     it.BothArrows = s.BothArrows;
                     it.GradientFill = s.GradientFill;
                     if (s.Head != ArrowHead.Filled) it.Head = s.Head.ToString();
@@ -284,6 +286,12 @@ namespace SnapView.Core
             return frame;
         }
 
+        private static Color? ParseOptionalColor(string? value)
+        {
+            try { return value == null ? null : (Color)ColorConverter.ConvertFromString(value); }
+            catch { return null; }
+        }
+
         private static Annotation? FromItem(Item it)
         {
             Point P1() => new(it.X1 ?? 0, it.Y1 ?? 0);
@@ -296,6 +304,7 @@ namespace SnapView.Core
                     Kind = Enum.TryParse(it.Kind, out ToolKind k) ? k : ToolKind.Rectangle,
                     Start = P1(), End = P2(),
                     Filled = it.Filled ?? false,
+                    FillColor = ParseOptionalColor(it.FillColor),
                     BothArrows = it.BothArrows ?? false,
                     GradientFill = it.GradientFill ?? false,
                     Head = Enum.TryParse(it.Head, out ArrowHead head) ? head : ArrowHead.Filled

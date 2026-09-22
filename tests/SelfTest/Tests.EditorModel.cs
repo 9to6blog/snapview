@@ -107,13 +107,13 @@ internal static partial class SelfTest
         ShapeAnnotation Arrow(ArrowHead head) => new()
         {
             Kind = ToolKind.Arrow, Start = new Point(10, 30), End = new Point(80, 30),
-            Color = Colors.Red, Thickness = 2, Head = head
+            Color = Colors.Red, Thickness = 8, Head = head
         };
-        // (70,28): 촉 삼각형 안이면서 몸통(굵기 2)과 열린 촉 선 사이의 빈 곳.
-        Check("채운 촉은 삼각형 안이 빨강", PixelAtRgb(AnnotationRenderer.Flatten(white, new[] { Arrow(ArrowHead.Filled) }), 70, 28).G < 120);
-        Check("열린 촉은 삼각형 안이 비어 있다", PixelAtRgb(AnnotationRenderer.Flatten(white, new[] { Arrow(ArrowHead.Open) }), 70, 28).G > 200);
+        // 촉 내부에서 몸통과 열린 촉 선 사이의 빈 곳을 검사한다.
+        Check("채운 촉은 삼각형 안이 빨강", PixelAtRgb(AnnotationRenderer.Flatten(white, new[] { Arrow(ArrowHead.Filled) }), 57, 25).G < 120);
+        Check("열린 촉은 삼각형 안이 비어 있다", PixelAtRgb(AnnotationRenderer.Flatten(white, new[] { Arrow(ArrowHead.Open) }), 57, 25).G > 200);
         BitmapSource dot = AnnotationRenderer.Flatten(white, new[] { Arrow(ArrowHead.Dot) });
-        Check("점 촉은 끝에 동그라미", PixelAtRgb(dot, 80, 30).G < 120 && PixelAtRgb(dot, 70, 28).G > 200);
+        Check("점 촉은 끝에 동그라미", PixelAtRgb(dot, 80, 30).G < 120 && PixelAtRgb(dot, 60, 15).G > 200);
         Check("복제가 촉 모양을 지킨다", ((ShapeAnnotation)Arrow(ArrowHead.Dot).Clone()).Head == ArrowHead.Dot);
 
         int Segments(DashPattern pattern)

@@ -23,7 +23,7 @@ internal static partial class SelfTest
     private static void Section(string title) => Console.WriteLine("\n== " + title + " ==");
 
     [STAThread]
-    private static int Main()
+    private static int Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         string tmp = Path.Combine(Path.GetTempPath(), "SnapViewSelfTest_" + Guid.NewGuid().ToString("N")[..8]);
@@ -31,6 +31,19 @@ internal static partial class SelfTest
 
         try
         {
+            if (Array.IndexOf(args, "--editor") >= 0)
+            {
+                TestEditorRegressions(tmp);
+                TestEditorKeyMap(); TestEditorPanelRules(); TestUndoStack(); TestEditorMath();
+                TestAnnotationStyle(); TestImageFilters(); TestPreviewMatchesResult();
+                TestProAnnotations(); TestBlendModes(); TestTargetedEraser(); TestProjectFile();
+                TestGradientAndLock(); TestLineStyles(); TestNumberArrow(); TestFreeRotation();
+                TestShapedMasks(); TestArrowHeadsAndDashes(); TestHighlighterMultiply();
+                TestFlattenDpi(); TestProjectRoundTripV2(); TestHandlesAndFlip();
+                Console.WriteLine($"\n결과: 통과 {_pass}, 실패 {_fail}");
+                return _fail == 0 ? 0 : 1;
+            }
+            TestEditorRegressions(tmp);
             TestHotKeys();
             TestLaunchRequest(tmp);
             TestPrintScreenChain();

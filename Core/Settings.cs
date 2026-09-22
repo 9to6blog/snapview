@@ -136,6 +136,7 @@ namespace SnapView.Core
         /// <summary>0.1 ~ 1.0. 편집기에서 그리는 것들의 불투명도.</summary>
         public double AnnotationOpacity { get; set; } = 1.0;
         public bool AnnotationFilled { get; set; }
+        public string AnnotationFillColor { get; set; } = "#FFFFD166";
         public int MosaicBlockSize { get; set; } = 12;
 
         /// <summary>마지막에 쓴 편집 도구. 다음에 열 때 그 도구로 시작한다.</summary>

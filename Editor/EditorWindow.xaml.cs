@@ -158,6 +158,7 @@ namespace SnapView.Editor
             Canvas1.Source = image;
             _thickness = Math.Clamp(settings.AnnotationThickness, 1, 16);
             _color = ParseColor(settings.AnnotationColor);
+            _fillColor = ParseColor(settings.AnnotationFillColor);
 
             _opacity = Math.Clamp(settings.AnnotationOpacity, 0.1, 1.0);
             _filled = settings.AnnotationFilled;
@@ -176,6 +177,7 @@ namespace SnapView.Editor
             TbItalic.IsChecked = _italic;
 
             BuildSwatches();
+            BuildFillSwatches();
             BuildFontList();
             BuildShapeGallery();
             BuildMaskShapeList();
@@ -186,6 +188,7 @@ namespace SnapView.Editor
             SetAlignButtons();
             SelectTool(LastTool());
 
+            InitializeGuides();
             Stage.MouseLeftButtonDown += OnStageDown;
             Stage.MouseMove += OnStageMove;
             Stage.MouseLeftButtonUp += OnStageUp;
@@ -440,8 +443,8 @@ namespace SnapView.Editor
             var more = new Button
             {
                 Style = (Style)FindResource("ToolButton"),
-                Content = MoreGlyph(),
-                Padding = new Thickness(6, 4, 6, 4),
+                Content = MoreGlyph(), Width = 32, Height = 28,
+                Padding = new Thickness(4),
                 ToolTip = $"도형 더보기 (전체 {ShapeGeometry.All.Length}개)"
             };
             more.Click += OnMoreShapes;
@@ -452,13 +455,15 @@ namespace SnapView.Editor
         {
             var tb = new ToggleButton
             {
-                Style = (Style)FindResource("ToolToggle"),
-                Content = ShapeIcon(kind),
+                Style = (Style)FindResource("EditorTool"),
+                Content = ShapeGeometry.NameOf(kind),
                 Tag = kind.ToString(),
                 ToolTip = ShapeGeometry.NameOf(kind),
-                MinWidth = 30,
-                Padding = new Thickness(4)
+                Width = 32, MinWidth = 0, Height = 28,
+                ContentTemplate = (DataTemplate)FindResource("EditorIconOnly"),
+                Padding = new Thickness(5)
             };
+            ToolbarIcon.SetData(tb, ShapeIcon(kind).Data);
             tb.Click += OnToolClick;
             return tb;
         }
@@ -766,6 +771,7 @@ namespace SnapView.Editor
             // 2줄 가운데는 자리가 흔들리면 눈이 피곤하니 흐리게만 하고, 줄 끝의 묶음은 접는다.
             LineGroup.IsEnabled = p.HasFlag(EditorPanel.Line) || p.HasFlag(EditorPanel.Font);
             FillGroup.Visibility = V(p.HasFlag(EditorPanel.Fill));
+            FillPaletteRow.Visibility = FillGroup.Visibility;
             ArrowGroup.Visibility = V(p.HasFlag(EditorPanel.ArrowHead));
         }
 

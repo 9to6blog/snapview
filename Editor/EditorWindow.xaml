@@ -11,10 +11,16 @@
         <Border DockPanel.Dock="Top" Background="{StaticResource BgChrome}" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1" Padding="8,5">
             <WrapPanel x:Name="ActionToolbar">
                 <StackPanel Style="{StaticResource EditorActionGroup}">
-                    <Button Style="{StaticResource EditorAction}" Content="프로젝트 ▾" ed:ToolbarIcon.Data="{StaticResource EditProject}" ToolTip="프로젝트 저장·열기 (.snapview)" Click="OnProjectMenu" />
+                    <Button Style="{StaticResource EditorAction}" x:Name="BtnProject" Content="프로젝트" ContentTemplate="{StaticResource EditorMenuContent}" ed:ToolbarIcon.Data="{StaticResource EditProject}" ToolTip="프로젝트 저장·열기 (.snapview)" Click="OnProjectMenu" />
                     <Rectangle Style="{StaticResource ToolSeparator}" />
-                    <Button x:Name="BtnUndo" Style="{StaticResource EditorIconButton}" Content="실행취소" ed:ToolbarIcon.Data="{StaticResource EditUndo}" ToolTip="실행취소 (Ctrl+Z)" Click="OnUndo" />
-                    <Button x:Name="BtnRedo" Style="{StaticResource EditorIconButton}" Content="다시실행" ed:ToolbarIcon.Data="{StaticResource EditRedo}" ToolTip="다시실행 (Ctrl+Shift+Z · Ctrl+Y)" Click="OnRedo" />
+                    <Button x:Name="BtnSave" Style="{StaticResource EditorPrimaryAction}" Content="저장" ed:ToolbarIcon.Data="{StaticResource EditSave}" ToolTip="저장 (Ctrl+S) · 기본 저장 폴더" Click="OnSave" />
+                    <Button x:Name="BtnSaveAs" Style="{StaticResource EditorAction}" Content="다른 이름으로 저장" ed:ToolbarIcon.Data="{StaticResource EditSaveAs}" ToolTip="다른 경로·이름·형식으로 저장" Click="OnSaveAs" />
+                    <Button x:Name="BtnCopy" Style="{StaticResource EditorAction}" Content="복사" ed:ToolbarIcon.Data="{StaticResource EditCopy}" ToolTip="전체 그림 복사 (Ctrl+Shift+C)" Click="OnCopy" />
+                    <Rectangle Style="{StaticResource ToolSeparator}" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource EditorActionGroup}">
+                    <Button x:Name="BtnUndo" Style="{StaticResource EditorIconButton}" Content="이전" ed:ToolbarIcon.Data="{StaticResource EditUndo}" ToolTip="실행취소 (Ctrl+Z)" Click="OnUndo" />
+                    <Button x:Name="BtnRedo" Style="{StaticResource EditorIconButton}" Content="앞으로" ed:ToolbarIcon.Data="{StaticResource EditRedo}" ToolTip="다시실행 (Ctrl+Shift+Z · Ctrl+Y)" Click="OnRedo" />
                 </StackPanel>
                 <StackPanel Style="{StaticResource EditorActionGroup}">
                     <Button x:Name="BtnRotateLeft" Style="{StaticResource EditorAction}" Content="왼쪽 회전" ed:ToolbarIcon.Data="{StaticResource IconRotateLeft}" ToolTip="왼쪽으로 90° 회전 (Ctrl+Shift+R)" Click="OnRotateLeft" />
@@ -26,17 +32,12 @@
                     <ToggleButton x:Name="TbCrop" Style="{StaticResource EditorToggleAction}" Content="자르기" Tag="Crop" ed:ToolbarIcon.Data="{StaticResource EditCrop}" ToolTip="자르기 (C) · 영역을 고른 뒤 Enter로 적용" Click="OnToolClick" />
                     <Button x:Name="BtnResize" Style="{StaticResource EditorAction}" Content="크기" ed:ToolbarIcon.Data="{StaticResource EditResize}" ToolTip="이미지 크기 조절 (확대·축소)" Click="OnResizeCanvas" />
                     <Button x:Name="BtnImageMenu" Style="{StaticResource EditorIconButton}" Content="캔버스 여백" ed:ToolbarIcon.Data="{StaticResource EditCanvas}" ToolTip="캔버스 여백 늘리기" Click="OnExpandCanvas" />
-                    <Button x:Name="BtnFilter" Style="{StaticResource EditorAction}" Content="필터 ▾" ed:ToolbarIcon.Data="{StaticResource EditFilter}" ToolTip="이미지 전체에 효과 적용" Click="OnFilterMenu" />
+                    <Button x:Name="BtnFilter" Style="{StaticResource EditorAction}" Content="필터" ContentTemplate="{StaticResource EditorMenuContent}" ed:ToolbarIcon.Data="{StaticResource EditFilter}" ToolTip="이미지 전체에 효과 적용" Click="OnFilterMenu" />
                 </StackPanel>
                 <StackPanel Style="{StaticResource EditorActionGroup}" Margin="0,2,0,2">
                     <Button Style="{StaticResource EditorIconButton}" Content="꾸며서 내보내기" ed:ToolbarIcon.Data="{StaticResource EditExport}" ToolTip="꾸며서 내보내기 · 여백·배경·그림자·워터마크" Click="OnExportDecorated" />
-                    <Button x:Name="BtnCopy" Style="{StaticResource EditorAction}" Content="복사" ed:ToolbarIcon.Data="{StaticResource EditCopy}" ToolTip="전체 그림 복사 (Ctrl+Shift+C)" Click="OnCopy" />
-                    <Button x:Name="BtnSave" Style="{StaticResource EditorPrimaryAction}" Content="저장" ed:ToolbarIcon.Data="{StaticResource EditSave}" ToolTip="저장 (Ctrl+S) · 처음에는 기본 폴더에 저장" Click="OnSave">
-                        <Button.ContextMenu>
-                            <ContextMenu><MenuItem Header="다른 이름으로 저장..." Click="OnSaveAs"/></ContextMenu>
-                        </Button.ContextMenu>
-                    </Button>
-                    <Button x:Name="BtnSaveOptions" Style="{StaticResource EditorIconButton}" Content="저장 옵션" ed:ToolbarIcon.Data="{StaticResource IconChevron}" Width="26" MinWidth="26" ToolTip="다른 이름으로 저장" Click="OnSaveOptions" />
+                    <ToggleButton x:Name="TbRulers" Style="{StaticResource EditorToggleAction}" Content="줄자" ed:ToolbarIcon.Data="{StaticResource EditRuler}" ToolTip="픽셀 줄자 · 끌어서 가이드 추가 · 가이드를 그림 밖으로 끌면 삭제" Click="OnRulersToggled" />
+                    <Button x:Name="BtnClearGuides" Style="{StaticResource EditorIconButton}" Content="가이드 모두 지우기" ed:ToolbarIcon.Data="{StaticResource EditClearGuides}" ToolTip="가이드 모두 지우기" Click="OnClearGuides" />
                     <Button x:Name="BtnDone" Style="{StaticResource EditorAction}" Content="완료" Foreground="#FF8CD9A9" ed:ToolbarIcon.Data="{StaticResource IconCheck}" ToolTip="설정대로 저장·복사하고 닫기 (Ctrl+Enter)" Click="OnDone" />
                 </StackPanel>
             </WrapPanel>
@@ -44,12 +45,16 @@
         <!-- 도구별 스타일. 짝을 이루는 라벨·입력칸은 함께 줄바꿈한다. -->
         <Border DockPanel.Dock="Top" Background="#FF222328" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1">
             <StackPanel Margin="10,5,10,4">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock Text="선 색상" Width="62" Style="{StaticResource FieldLabel}" />
+                    <StackPanel x:Name="SwatchPanel" Orientation="Horizontal" VerticalAlignment="Center" ToolTip="숫자키 1~8로 선택" />
+                    <StackPanel x:Name="RecentPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0" ToolTip="최근 색상" />
+                </StackPanel>
+                <StackPanel x:Name="FillPaletteRow" Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock Text="채우기 색상" Width="62" Style="{StaticResource FieldLabel}" />
+                    <StackPanel x:Name="FillSwatchPanel" Orientation="Horizontal" VerticalAlignment="Center" />
+                </StackPanel>
                 <WrapPanel x:Name="StyleToolbar">
-                    <StackPanel Orientation="Horizontal" Margin="0,2,12,2">
-                        <TextBlock Text="색상" Style="{StaticResource FieldLabel}" Margin="0,0,8,0" />
-                        <StackPanel x:Name="SwatchPanel" Orientation="Horizontal" VerticalAlignment="Center" ToolTip="숫자키 1~8 로도 고른다" />
-                        <StackPanel x:Name="RecentPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0" ToolTip="최근 쓴 색(스포이드·직접 고른 색)" />
-                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,2,12,2">
                         <TextBlock Text="굵기" Style="{StaticResource FieldLabel}" />
                         <ed:NumberStepper x:Name="ThicknessBox" Width="84" Height="26" VerticalAlignment="Center" ToolTip="선 굵기. 칸 위에서 휠을 굴려도 됩니다." />
@@ -59,23 +64,24 @@
                         <ed:NumberStepper x:Name="OpacityBox" Width="92" Height="26" VerticalAlignment="Center" ToolTip="그리는 것들의 불투명도. 모자이크·흐림은 가린 내용이 비치면 안 되므로 제외." />
                     </StackPanel>
                     <StackPanel x:Name="LineGroup" Orientation="Horizontal" VerticalAlignment="Center">
-                        <ToggleButton x:Name="TbDash" Style="{StaticResource ToolToggle}" Content="점선" Margin="8,0,0,0" ToolTip="테두리·선·펜 획을 점선으로" Click="OnDashToggled" />
-                        <ComboBox x:Name="DashPatternBox" Width="78" Height="26" VerticalAlignment="Center" ToolTip="점선 무늬" SelectionChanged="OnDashPatternChanged">
+                        <TextBlock Text="선 종류" Style="{StaticResource FieldLabel}" Margin="4,0,5,0" />
+                        <ComboBox x:Name="DashPatternBox" Width="96" Height="26" VerticalAlignment="Center" ToolTip="선·도형 테두리·펜의 선 종류" SelectionChanged="OnDashPatternChanged">
+                            <ComboBoxItem Content="실선" />
                             <ComboBoxItem Content="대시" />
-                            <ComboBoxItem Content="점" />
+                            <ComboBoxItem Content="점선" />
                             <ComboBoxItem Content="일점쇄선" />
                         </ComboBox>
                         <ToggleButton x:Name="TbShadow" Style="{StaticResource ToolToggle}" Content="그림자" Margin="4,0,0,0" ToolTip="도형·글자 뒤에 그림자를 깐다 — 캡처 배경에서 또렷이 떠 보인다" Click="OnShadowToggled" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="8,2,6,2">
                         <TextBlock Text="혼합" Style="{StaticResource FieldLabel}" />
-                        <ComboBox x:Name="BlendBox" Width="86" Height="26" VerticalAlignment="Center" ToolTip="도형·형광펜·붙인 그림을 바탕과 섞는 방식 (곱하기·스크린·오버레이). 바탕 그림하고만 섞인다." SelectionChanged="OnBlendChanged" />
+                        <ComboBox x:Name="BlendBox" Width="86" Height="26" VerticalAlignment="Center" ToolTip="도형·형광펜·붙인 그림을 바탕과 섞는 방식 (곱하기·스크린·오버레이). 아래 레이어와 섞인다." SelectionChanged="OnBlendChanged" />
                     </StackPanel>
-                    <Button x:Name="BtnArrange" Style="{StaticResource ToolButton}" Content="정렬 ▾" ToolTip="선택한 주석 정렬·균등 간격" Click="OnArrangeMenu" />
+                    <Button x:Name="BtnArrange" Style="{StaticResource ToolButton}" Content="정렬" ContentTemplate="{StaticResource EditorMenuContent}" ed:ToolbarIcon.Data="{StaticResource EditAlign}" ToolTip="선택한 주석 정렬·균등 간격" Click="OnArrangeMenu" />
                     <StackPanel x:Name="FillGroup" Orientation="Horizontal" VerticalAlignment="Center">
                         <Rectangle Style="{StaticResource ToolSeparator}" />
                         <ToggleButton x:Name="TbFill" Style="{StaticResource ToolToggle}" Content="채우기" ToolTip="안쪽을 색으로 채운다 (F)" Click="OnFillToggled" />
-                        <ToggleButton x:Name="TbGradient" Style="{StaticResource ToolToggle}" Content="그라데" ToolTip="채우기를 위→아래로 옅어지는 그라데이션으로" Click="OnGradientToggled" />
+                        <ToggleButton x:Name="TbGradient" Style="{StaticResource ToolToggle}" Content="그라데이션" ToolTip="채우기를 위→아래로 옅어지는 그라데이션으로" Click="OnGradientToggled" />
                     </StackPanel>
                     <StackPanel x:Name="ArrowGroup" Orientation="Horizontal" VerticalAlignment="Center">
                         <Rectangle Style="{StaticResource ToolSeparator}" />
@@ -89,7 +95,7 @@
                     </StackPanel>
                 </WrapPanel>
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,4,0,0">
-                    <Grid Height="30">
+                    <StackPanel Orientation="Horizontal" MinHeight="30">
                         <TextBlock x:Name="Row3Hint" Style="{StaticResource FieldLabel}" Margin="4,0,0,0" VerticalAlignment="Center" Text="도구를 고르면 여기에 그 도구의 세부 설정이 나옵니다" />
                         <StackPanel x:Name="FontPanel" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                             <TextBlock Text="글꼴" Style="{StaticResource FieldLabel}" Margin="4,0,5,0" />
@@ -120,6 +126,10 @@
                             </StackPanel>
                         </StackPanel>
                         <StackPanel x:Name="MagnifierPanel" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock Text="원본 지름" Style="{StaticResource FieldLabel}" Margin="4,0,5,0" />
+                            <ed:NumberStepper x:Name="MagnifierSourceBox" Width="94" Height="26" ToolTip="확대할 원본 범위의 지름(px)" />
+                            <TextBlock Text="확대 창 지름" Style="{StaticResource FieldLabel}" Margin="10,0,5,0" />
+                            <ed:NumberStepper x:Name="MagnifierDisplayBox" Width="94" Height="26" ToolTip="확대 창의 지름(px) · 원본 범위와 별도로 조절" />
                             <TextBlock Text="배율" Style="{StaticResource FieldLabel}" Margin="4,0,5,0" />
                             <ComboBox x:Name="MagnifierZoomBox" Width="70" Height="26" VerticalAlignment="Center" ToolTip="확대 창 배율" SelectionChanged="OnMagnifierZoomChanged">
                                 <ComboBoxItem Content="1.5×" />
@@ -127,7 +137,7 @@
                                 <ComboBoxItem Content="3×" />
                                 <ComboBoxItem Content="4×" />
                             </ComboBox>
-                            <TextBlock Style="{StaticResource FieldLabel}" Margin="10,0,0,0" Text="작은 점이 확대할 곳, 원이 확대 창 — 각각 끌어 맞춘다" />
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="10,0,0,0" Text="각 원의 가장자리 점을 끌어 크기 조절" />
                         </StackPanel>
                         <StackPanel x:Name="CounterPanel" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                             <TextBlock Text="다음 번호" Style="{StaticResource FieldLabel}" Margin="4,0,5,0" />
@@ -157,7 +167,7 @@
                             <Button Style="{StaticResource ToolButton}" Content="복사" ToolTip="Ctrl+C" Click="OnRegionCopy" />
                             <Button Style="{StaticResource ToolButton}" Content="잘라내기" ToolTip="Ctrl+X — 그 자리는 투명해진다" Click="OnRegionCut" />
                         </StackPanel>
-                    </Grid>
+                    </StackPanel>
                 </ScrollViewer>
             </StackPanel>
         </Border>
@@ -185,9 +195,9 @@
             </Grid>
         </Border>
         <!-- 아이콘과 짧은 이름을 함께 표시해 도구를 외우지 않아도 찾을 수 있다. -->
-        <Border DockPanel.Dock="Left" Width="142" Background="{StaticResource BgChrome}" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,1,0">
+        <Border DockPanel.Dock="Left" Width="126" Background="{StaticResource BgChrome}" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,1,0">
             <ScrollViewer x:Name="ToolRailScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Width="112" Margin="6,0,6,8" HorizontalAlignment="Center">
+                <StackPanel Width="104" Margin="6,0,6,8" HorizontalAlignment="Center">
                     <TextBlock Text="선택 · 이동" Style="{StaticResource EditorGroupCaption}" />
                     <WrapPanel>
                         <ToggleButton x:Name="TbSelect" Style="{StaticResource EditorTool}" Content="선택" ToolTip="주석 고르기 · 옮기기 · Delete 로 삭제 · 글자는 더블클릭으로 다시 편집 (V)" Click="OnToolClick" Tag="Select" ed:ToolbarIcon.Data="{StaticResource EditSelect}" />
@@ -201,10 +211,10 @@
                         <ToggleButton x:Name="TbHighlighter" Style="{StaticResource EditorTool}" Content="형광펜" ToolTip="형광펜 (H) — 흰 종이는 노랗게, 글자는 그대로(곱하기)" Click="OnToolClick" Tag="Highlighter" ed:ToolbarIcon.Data="{StaticResource EditHighlight}" />
                         <ToggleButton x:Name="TbText" Style="{StaticResource EditorTool}" Content="텍스트" ToolTip="글자 · Enter 줄바꿈 · Ctrl+Enter 마침 · 오른쪽 조절점으로 폭 (T)" Click="OnToolClick" Tag="Text" ed:ToolbarIcon.Data="{StaticResource EditText}" />
                         <ToggleButton x:Name="TbCounter" Style="{StaticResource EditorTool}" Content="번호" ToolTip="순서 번호 (N)" Click="OnToolClick" Tag="Counter" ed:ToolbarIcon.Data="{StaticResource EditNumber}" />
-                        <ToggleButton x:Name="TbNumArrow" Style="{StaticResource EditorTool}" Content="번호화살표" ToolTip="번호 원 + 가리키는 화살표 (Shift+N) — 가리킬 곳에 대고 끌면 번호가 딸려 나온다" Click="OnToolClick" Tag="NumberArrow" ed:ToolbarIcon.Data="{StaticResource EditNumberArrow}" FontSize="9.5" />
+                        <ToggleButton x:Name="TbNumArrow" Style="{StaticResource EditorTool}" Content="번호 화살표" ToolTip="번호 원 + 가리키는 화살표 (Shift+N) — 가리킬 곳에 대고 끌면 번호가 딸려 나온다" Click="OnToolClick" Tag="NumberArrow" ed:ToolbarIcon.Data="{StaticResource EditNumberArrow}" FontSize="9" />
                     </WrapPanel>
                     <TextBlock Text="도형" Style="{StaticResource EditorGroupCaption}" />
-                    <WrapPanel x:Name="ShapeGallery" Margin="2,0" />
+                    <WrapPanel x:Name="ShapeGallery" />
                     <TextBlock Text="가리기 · 강조" Style="{StaticResource EditorGroupCaption}" />
                     <WrapPanel>
                         <ToggleButton x:Name="TbMosaic" Style="{StaticResource EditorTool}" Content="모자이크" ToolTip="개인정보 가리기 (M) — 아래 줄에서 모양(타원·도형)을 고를 수 있다" Click="OnToolClick" Tag="Mosaic" ed:ToolbarIcon.Data="{StaticResource EditMosaic}" />
@@ -217,7 +227,7 @@
                         <ToggleButton x:Name="TbWand" Style="{StaticResource EditorTool}" Content="자동 선택" ToolTip="클릭한 자리와 비슷한 색 영역을 고른다 (W) — Delete 투명(배경 제거) · Enter 색 채우기 · Shift+클릭 추가" Click="OnToolClick" Tag="Wand" ed:ToolbarIcon.Data="{StaticResource EditWand}" />
                         <ToggleButton x:Name="TbPicker" Style="{StaticResource EditorTool}" Content="스포이드" ToolTip="그림에서 색을 집는다 (I) — 집고 나면 쓰던 도구로 돌아간다" Click="OnToolClick" Tag="Picker" ed:ToolbarIcon.Data="{StaticResource EditPicker}" />
                         <ToggleButton x:Name="TbEraser" Style="{StaticResource EditorTool}" Content="지우개" ToolTip="끌어서 지나간 자리를 지운다 (E) — 굵기만큼 지워진다" Click="OnToolClick" Tag="Eraser" ed:ToolbarIcon.Data="{StaticResource EditErase}" />
-                        <ToggleButton x:Name="TbPixelEraser" Style="{StaticResource EditorTool}" Content="픽셀지우개" ToolTip="그림 자체를 투명하게 지운다 (Shift+E) — 굵기만큼 지워진다" Click="OnToolClick" Tag="PixelEraser" ed:ToolbarIcon.Data="{StaticResource EditPixelErase}" FontSize="9.5" />
+                        <ToggleButton x:Name="TbPixelEraser" Style="{StaticResource EditorTool}" Content="픽셀 지우개" ToolTip="그림 자체를 투명하게 지운다 (Shift+E) — 굵기만큼 지워진다" Click="OnToolClick" Tag="PixelEraser" ed:ToolbarIcon.Data="{StaticResource EditPixelErase}" FontSize="9" />
                     </WrapPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -247,7 +257,13 @@
                 <ListBox x:Name="LayerList" Background="Transparent" BorderThickness="0" Foreground="{StaticResource Fg}" SelectionMode="Extended" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="OnLayerSelected" HorizontalContentAlignment="Stretch" />
             </DockPanel>
         </Border>
-        <ScrollViewer x:Name="Scroller" Focusable="False" Background="{StaticResource Bg}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" PreviewMouseWheel="OnStageWheel">
+        <Grid x:Name="ViewportGrid" ClipToBounds="True">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border x:Name="RulerCorner" Width="24" Height="24" Visibility="Collapsed" Background="{StaticResource BgChrome}"><TextBlock Text="px" Foreground="{StaticResource FgDim}" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+            <ed:EditorRuler x:Name="HorizontalRuler" Grid.Column="1" Height="24" Visibility="Collapsed" ToolTip="아래로 끌어 가로 가이드 추가 · 오른쪽 클릭으로 모두 지우기" />
+            <ed:EditorRuler x:Name="VerticalRuler" Grid.Row="1" Width="24" Vertical="True" Visibility="Collapsed" ToolTip="오른쪽으로 끌어 세로 가이드 추가 · 오른쪽 클릭으로 모두 지우기" />
+        <ScrollViewer x:Name="Scroller" Grid.Row="1" Grid.Column="1" Focusable="False" Background="{StaticResource Bg}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" PreviewMouseWheel="OnStageWheel">
             <Grid x:Name="Stage" Background="Transparent">
                 <!-- 체커보드는 그림 자리에만 깐다. 편집기 바닥 전체에 깔면 눈이 시끄럽고
                      투명한 곳이 어디인지 되레 안 보인다. -->
@@ -259,5 +275,6 @@
                 </Grid>
             </Grid>
         </ScrollViewer>
+        </Grid>
     </DockPanel>
 </Window>
