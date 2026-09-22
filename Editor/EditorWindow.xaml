@@ -6,6 +6,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
+    <Grid x:Name="EditorRoot">
     <DockPanel>
         <!-- 회전·뒤집기·자르기·저장은 항상 바로 보인다. 좁은 창에서는 묶음 단위로 줄바꿈한다. -->
         <Border DockPanel.Dock="Top" Background="{StaticResource BgChrome}" BorderBrush="{StaticResource Divider}" BorderThickness="0,0,0,1" Padding="8,5">
@@ -211,7 +212,7 @@
                         <ToggleButton x:Name="TbHighlighter" Style="{StaticResource EditorTool}" Content="형광펜" ToolTip="형광펜 (H) — 흰 종이는 노랗게, 글자는 그대로(곱하기)" Click="OnToolClick" Tag="Highlighter" ed:ToolbarIcon.Data="{StaticResource EditHighlight}" />
                         <ToggleButton x:Name="TbText" Style="{StaticResource EditorTool}" Content="텍스트" ToolTip="글자 · Enter 줄바꿈 · Ctrl+Enter 마침 · 오른쪽 조절점으로 폭 (T)" Click="OnToolClick" Tag="Text" ed:ToolbarIcon.Data="{StaticResource EditText}" />
                         <ToggleButton x:Name="TbCounter" Style="{StaticResource EditorTool}" Content="번호" ToolTip="순서 번호 (N)" Click="OnToolClick" Tag="Counter" ed:ToolbarIcon.Data="{StaticResource EditNumber}" />
-                        <ToggleButton x:Name="TbNumArrow" Style="{StaticResource EditorTool}" Content="번호 화살표" ToolTip="번호 원 + 가리키는 화살표 (Shift+N) — 가리킬 곳에 대고 끌면 번호가 딸려 나온다" Click="OnToolClick" Tag="NumberArrow" ed:ToolbarIcon.Data="{StaticResource EditNumberArrow}" FontSize="9" />
+                        <ToggleButton x:Name="TbNumArrow" Style="{StaticResource EditorTool}" Content="번호 화살표" ToolTip="번호 화살표 (Shift+N) — 누른 곳에 번호, 끈 끝에 화살촉 · 두 번 클릭으로도 배치" Click="OnToolClick" Tag="NumberArrow" ed:ToolbarIcon.Data="{StaticResource EditNumberArrow}" FontSize="9" />
                     </WrapPanel>
                     <TextBlock Text="도형" Style="{StaticResource EditorGroupCaption}" />
                     <WrapPanel x:Name="ShapeGallery" />
@@ -220,7 +221,7 @@
                         <ToggleButton x:Name="TbMosaic" Style="{StaticResource EditorTool}" Content="모자이크" ToolTip="개인정보 가리기 (M) — 아래 줄에서 모양(타원·도형)을 고를 수 있다" Click="OnToolClick" Tag="Mosaic" ed:ToolbarIcon.Data="{StaticResource EditMosaic}" />
                         <ToggleButton x:Name="TbBlur" Style="{StaticResource EditorTool}" Content="흐림" ToolTip="부드럽게 가리기 (B) — 아래 줄에서 모양을 고를 수 있다" Click="OnToolClick" Tag="Blur" ed:ToolbarIcon.Data="{StaticResource EditBlur}" />
                         <ToggleButton x:Name="TbSpotlight" Style="{StaticResource EditorTool}" Content="강조" ToolTip="고른 영역만 밝게 남기고 밖을 어둡게 (Shift+L) — 투명도가 어둡기, 아래 줄에서 모양" Click="OnToolClick" Tag="Spotlight" ed:ToolbarIcon.Data="{StaticResource EditSpotlight}" />
-                        <ToggleButton x:Name="TbMagnifier" Style="{StaticResource EditorTool}" Content="돋보기" ToolTip="한 곳을 동그란 창에 확대해 보여 준다 (Shift+M) — 작은 점이 확대할 곳, 원이 확대 창" Click="OnToolClick" Tag="Magnifier" ed:ToolbarIcon.Data="{StaticResource EditMagnify}" />
+                        <ToggleButton x:Name="TbMagnifier" Style="{StaticResource EditorTool}" Content="돋보기" ToolTip="돋보기 (Shift+M) — 누른 곳이 확대 대상, 끌어서 확대 창 배치 · 각 원 안을 끌어 따로 이동" Click="OnToolClick" Tag="Magnifier" ed:ToolbarIcon.Data="{StaticResource EditMagnify}" />
                     </WrapPanel>
                     <TextBlock Text="수정 · 지우기" Style="{StaticResource EditorGroupCaption}" />
                     <WrapPanel>
@@ -277,4 +278,18 @@
         </ScrollViewer>
         </Grid>
     </DockPanel>
+    <Border x:Name="SaveToast" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+            Margin="16,0,16,52" MaxWidth="520" Padding="14,10" CornerRadius="8" Background="#F522392F"
+            BorderBrush="#FF437B58" BorderThickness="1" ToolTip="{Binding Text, ElementName=SaveToastPath}">
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Path Data="{StaticResource IconCheck}" Width="18" Height="18" Stretch="Uniform" Stroke="#FF8CD9A9"
+                  StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Margin="0,0,10,0" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1">
+                <TextBlock x:Name="SaveToastMessage" Text="저장했습니다" Foreground="White" FontSize="13" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite"/>
+                <TextBlock x:Name="SaveToastPath" Foreground="#FFBED1C5" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+    </Grid>
 </Window>

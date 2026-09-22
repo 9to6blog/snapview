@@ -64,10 +64,15 @@ internal static partial class SelfTest
         var number = new NumberArrowAnnotation { Tip = new Point(40, 40), Center = new Point(40, 40), Thickness = 3 };
         number.EnsureVisibleArrow(new Vector(1, 1));
         Check("클릭만 해도 번호 화살촉이 원 밖에 보임", (number.Center - number.Tip).Length >= number.Radius + 27.9);
-        number.Center = number.Tip + new Vector(-2, 0); number.EnsureVisibleArrow(new Vector(1, 1));
-        Check("짧은 드래그에서도 방향을 유지하며 화살표 노출", number.Center.X < number.Tip.X - number.Radius && number.Center.Y == number.Tip.Y);
-        Point distant = number.Center = new Point(150, 60); number.EnsureVisibleArrow(new Vector(1, 1));
-        Check("충분히 긴 번호 화살표는 그대로 유지", number.Center == distant);
+        Check("기본 화살촉을 늘려도 시작점의 번호는 고정", number.Center == new Point(40, 40));
+        number.Tip = number.Center + new Vector(-2, 0); number.EnsureVisibleArrow(new Vector(1, 1));
+        Check("짧은 드래그에서도 번호는 고정하고 끝에 화살촉 노출", number.Tip.X < number.Center.X - number.Radius && number.Center == new Point(40, 40));
+        Point distant = number.Tip = new Point(150, 60); number.EnsureVisibleArrow(new Vector(1, 1));
+        Check("충분히 긴 번호 화살표는 그대로 유지", number.Tip == distant);
+        Check("원본 원 안쪽 전체가 돋보기 이동 대상", magClone.PartAt(new Point(48, 69)) == MagnifierPart.Source);
+        Check("원본 원 테두리도 돋보기 이동 대상", magClone.PartAt(new Point(28, 54)) == MagnifierPart.Source);
+        Check("확대 창 내부는 확대 창 이동 대상", magClone.PartAt(magClone.Center) == MagnifierPart.Display);
+        Check("두 원 바깥은 이동 대상 아님", magClone.PartAt(new Point(300, 300)) == MagnifierPart.None);
 
         var shape = new ShapeAnnotation { Kind = ToolKind.Rectangle, Start = new Point(12, 12), End = new Point(148, 108), Color = Colors.Red, FillColor = Colors.Blue, Thickness = 4, Filled = true };
         var filled = AnnotationRenderer.Flatten(Solid(w, h, Colors.White), new[] { shape });

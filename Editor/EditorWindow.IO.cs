@@ -41,6 +41,7 @@ namespace SnapView.Editor
 
         private void SaveProject()
         {
+            HideSavedToast();
             CommitText();
             ConfirmActive();
 
@@ -60,6 +61,7 @@ namespace SnapView.Editor
                 UpdateTitle();
                 StHint.Text = "프로젝트 저장 — " + System.IO.Path.GetFileName(dlg.FileName) +
                               " (열면 레이어 그대로 이어서 편집)";
+                ShowSavedToast(dlg.FileName, project: true);
             }
             catch (Exception ex)
             {
@@ -346,6 +348,7 @@ namespace SnapView.Editor
 
         private void SaveResult(bool saveAs = false)
         {
+            HideSavedToast();
             BitmapSource img = Flatten();
             string? path = _imageSavePath;
             if (saveAs)
@@ -381,6 +384,7 @@ namespace SnapView.Editor
                 _dirty = false;
                 UpdateTitle();
                 StHint.Text = "저장했습니다 — " + path;
+                ShowSavedToast(path);
             }
             catch (Exception ex)
             {

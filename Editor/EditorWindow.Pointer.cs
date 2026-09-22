@@ -122,18 +122,27 @@ namespace SnapView.Editor
             // Space+끌기: 화면 이동. 도구와 무관하다.
             if (Keyboard.IsKeyDown(Key.Space)) { BeginPan(e); return; }
 
-            Point p = ImagePoint(e);
+            HandlePointerDown(ImagePoint(e), IsInsideImage(e), e.ClickCount);
+        }
+
+        private void HandlePointerDown(Point p, bool insideImage, int clickCount)
+        {
+            if (_numberArrowPhase == NumberArrowPhase.AwaitingTip)
+            {
+                if (insideImage) CompleteNumberArrow(p);
+                return;
+            }
 
             // 그림 바깥 여백을 눌렀다: 그리기가 아니라 "확정하고 선택 풀기" 다.
             // 예전엔 좌표가 가장자리로 잘려서 여백을 눌러도 0픽셀 도형이 생겼다.
-            if (!IsInsideImage(e))
+            if (!insideImage)
             {
                 ConfirmActive();
                 if (Canvas1.SelectedMany.Count > 0) { SetSelection(null); Canvas1.InvalidateVisual(); UpdateStatus(); }
                 return;
             }
 
-            if (e.ClickCount == 2)
+            if (clickCount == 2)
             {
                 // 글자 더블클릭: 다시 편집. 자르기 영역 안 더블클릭: 확정.
                 if (Canvas1.Active is CropAnnotation crop && crop.Bounds.Contains(p)) { ConfirmActive(); return; }
@@ -152,12 +161,15 @@ namespace SnapView.Editor
             if (Canvas1.Active is { } active)
             {
                 int h = HandleAtOrRotate(active, p);
+                if (h == 1 && active is MagnifierAnnotation sourceMag &&
+                    BeginMagnifierMove(sourceMag, p, MagnifierPart.Source)) return;
                 if (h != NoHandle)
                 {
                     _handleIndex = h;
                     Stage.CaptureMouse();
                     return;
                 }
+                if (active is MagnifierAnnotation activeMagnifier && BeginMagnifierMove(activeMagnifier, p)) return;
                 if (active.HitTestRotated(p) || active.Bounds.Contains(active.ToLocal(p)))
                 {
                     _movingActive = true;
@@ -240,6 +252,8 @@ namespace SnapView.Editor
                     Canvas1.Selected is { Locked: false } sel)
                 {
                     int hs = HandleAtOrRotate(sel, p);
+                    if (hs == 1 && sel is MagnifierAnnotation selectedSourceMag &&
+                        BeginMagnifierMove(selectedSourceMag, p, MagnifierPart.Source)) return;
                     if (hs != NoHandle)
                     {
                         PushUndo();
@@ -253,7 +267,7 @@ namespace SnapView.Editor
                 Annotation? hit = null;
                 for (int i = Canvas1.Items.Count - 1; i >= 0; i--)   // 위에 있는 것부터
                 {
-                    if (Canvas1.Items[i].Locked) continue;   // 잠긴 것은 안 집힌다
+                    if (Canvas1.Items[i].Locked || !Canvas1.Items[i].Visible) continue;
                     if (Canvas1.Items[i].HitTestRotated(p)) { hit = Canvas1.Items[i]; break; }
                 }
 
@@ -268,6 +282,10 @@ namespace SnapView.Editor
                         UpdateStatus();
                         return;
                     }
+
+                    if (!ctrlKey && hit is MagnifierAnnotation pickedMagnifier &&
+                        (Canvas1.SelectedMany.Count <= 1 || !Canvas1.SelectedMany.Contains(hit)) &&
+                        BeginMagnifierMove(pickedMagnifier, p)) return;
 
                     // 이미 골라 둔 무리 안을 눌렀으면 무리를 유지한 채 함께 끈다.
                     if (!Canvas1.SelectedMany.Contains(hit)) SetSelection(hit);
@@ -304,27 +322,27 @@ namespace SnapView.Editor
             // 3) 글자는 입력칸부터
             if (_tool == ToolKind.Text) { BeginText(p); return; }
 
-            // 돋보기: 클릭 한 번으로 놓는다. 잡은 곳 근처에 확대 창을 띄우고
-            // 조절 상태로 둔다 — 작은 점(확대할 곳)과 원(확대 창)을 끌어 맞춘다.
+            // 첫 누름이 확대 대상, 드래그 끝이 확대 창. 등록한 원도 같은 도구로 바로 움직인다.
             if (_tool == ToolKind.Magnifier)
             {
-                var mag = (MagnifierAnnotation)Init(new MagnifierAnnotation
+                for (int i = Canvas1.Items.Count - 1; i >= 0; i--)
                 {
-                    SourceCenter = p,
-                    Radius = _magnifierSourceRadius,
-                    DisplayRadius = _magnifierDisplayRadius
-                });
-
-                double dr = mag.DisplayRadius;
-                var want = new Point(p.X + dr + 46, p.Y - dr - 26);
-                mag.Center = new Point(
-                    Math.Clamp(want.X, dr, Math.Max(dr, Canvas1.ImageWidth - dr)),
-                    Math.Clamp(want.Y, dr, Math.Max(dr, Canvas1.ImageHeight - dr)));
-
-                Canvas1.Active = mag;
-                Canvas1.ShowActiveHandles = true;
-                Canvas1.InvalidateVisual();
-                UpdateStatus();
+                    Annotation item = Canvas1.Items[i];
+                    if (!item.Visible || item.Locked || !item.HitTestRotated(p)) continue;
+                    if (item is MagnifierAnnotation existing)
+                    {
+                        int handle = ReferenceEquals(Canvas1.Selected, existing) ? HandleAt(existing, p) : NoHandle;
+                        if (handle == 1 && BeginMagnifierMove(existing, p, MagnifierPart.Source)) return;
+                        if (handle != NoHandle)
+                        {
+                            PushUndo(); _resizingSelected = existing; _handleIndex = handle;
+                            Stage.CaptureMouse(); return;
+                        }
+                        if (BeginMagnifierMove(existing, p)) return;
+                    }
+                    break;
+                }
+                BeginMagnifierPlacement(p);
                 return;
             }
 
@@ -343,6 +361,8 @@ namespace SnapView.Editor
                 return;
             }
 
+            if (_tool == ToolKind.NumberArrow) { BeginNumberArrow(p); return; }
+
             // 5) 나머지는 끌어서 그린다
             _drawing = true;
             _startImage = p;
@@ -354,8 +374,25 @@ namespace SnapView.Editor
         private void OnStageMove(object sender, MouseEventArgs e)
         {
             if (_panning) { PanTo(e); return; }
-            if (e.LeftButton != MouseButtonState.Pressed) { UpdateHover(e); return; }
-            Point p = ImagePoint(e);
+            bool pressed = e.LeftButton == MouseButtonState.Pressed;
+            if (!pressed && _numberArrowPhase != NumberArrowPhase.AwaitingTip) { UpdateHover(e); return; }
+            HandlePointerMove(ImagePoint(e), pressed);
+        }
+
+        private void HandlePointerMove(Point p, bool pressed)
+        {
+            if (_numberArrowPhase == NumberArrowPhase.AwaitingTip)
+            {
+                UpdateNumberArrowTip(p); return;
+            }
+            if (!pressed) return;
+            if (_numberArrowPhase == NumberArrowPhase.Pressed)
+            {
+                _numberArrowDragged |= PastDragThreshold(p);
+                if (_numberArrowDragged) UpdateNumberArrowTip(p);
+                return;
+            }
+            if (_dragMagnifier != null) { MoveMagnifier(p); return; }
             StPos.Text = $"{(int)p.X}, {(int)p.Y}";
 
             if (_groupResizing)
@@ -466,12 +503,6 @@ namespace SnapView.Editor
                         path.Points.Add(p);
                     break;
 
-                case NumberArrowAnnotation na:
-                    Vector direction = na.Center - na.Tip;
-                    na.Center = p;
-                    na.EnsureVisibleArrow(direction);
-                    break;
-
                 case ShapeAnnotation shape:
                 {
                     // Shift 는 정사각형·45°, Alt 는 누른 자리를 가운데로.
@@ -505,6 +536,29 @@ namespace SnapView.Editor
         {
             Stage.ReleaseMouseCapture();
             if (_panning) { EndPan(); return; }
+            HandlePointerUp(ImagePoint(e));
+        }
+
+        private void HandlePointerUp(Point p)
+        {
+            if (_numberArrowPhase == NumberArrowPhase.Pressed)
+            {
+                if (_numberArrowDragged || PastDragThreshold(p)) CompleteNumberArrow(p);
+                else
+                {
+                    _numberArrowPhase = NumberArrowPhase.AwaitingTip;
+                    StHint.Text = "화살촉 위치를 클릭하면 등록됩니다 · Shift 45° · Esc 취소";
+                }
+                return;
+            }
+            if (_dragMagnifier is { } mag)
+            {
+                MoveMagnifier(p);
+                bool placing = _placingMagnifier;
+                ResetPlacementGestures();
+                if (placing) { ConfirmActive(); SetSelection(mag); }
+                Canvas1.InvalidateVisual(); UpdateStatus(); return;
+            }
             ClearFast();   // 끌기가 끝났으니 가리개를 정밀하게 다시 계산한다
 
             if (_groupResizing)
@@ -641,7 +695,7 @@ namespace SnapView.Editor
             }),
             ToolKind.Crop => new CropAnnotation { Start = p, End = p },
             ToolKind.Spotlight => Init(new SpotlightAnnotation { Start = p, End = p, Shape = _maskShape }),
-            // 화살촉을 가리킬 곳에 대고 끌면 번호 원이 딸려 나온다.
+            // 시작점에 번호를 놓고 끝점을 화살촉으로 쓴다.
             ToolKind.NumberArrow => CreateNumberArrow(p),
             _ => Init(new ShapeAnnotation { Kind = _tool, Start = p, End = p })
         };
@@ -732,9 +786,9 @@ namespace SnapView.Editor
                 if (h != NoHandle) cursor = HandleCursor(h, active);
                 else if (active.HitTestRotated(p) || active.Bounds.Contains(active.ToLocal(p))) cursor = Cursors.SizeAll;
             }
-            else if (_tool == ToolKind.Select)
+            else if (_tool is ToolKind.Select or ToolKind.Magnifier)
             {
-                if (Canvas1.SelectedMany.Count > 1)
+                if (_tool == ToolKind.Select && Canvas1.SelectedMany.Count > 1)
                 {
                     int gh = EditorMath.BoxHandleAt(ArrangeTools.Union(Canvas1.SelectedMany), p, Canvas1.ToImageLength(9));
                     if (gh >= 0) cursor = HandleCursor(gh, null);
@@ -768,6 +822,7 @@ namespace SnapView.Editor
         {
             if (handle == RotateHandle) return Cursors.Hand;
             if (a is TextAnnotation) return Cursors.SizeWE;
+            if (a is MagnifierAnnotation) return handle == 1 ? Cursors.SizeAll : Cursors.SizeWE;
             if (a != null && a.Handles().Count != 8) return Cursors.Cross;   // 선 끝점 · 돋보기 · 번호화살표
             return handle switch
             {

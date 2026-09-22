@@ -22,6 +22,7 @@ namespace SnapView.Editor
         /// <summary>지금 만들고 있던 주석을 확정한다. 자르기라면 실제로 자른다.</summary>
         private void ConfirmActive()
         {
+            ResetPlacementGestures();
             Annotation? a = Canvas1?.Active;
             if (a == null) return;
 
@@ -41,6 +42,8 @@ namespace SnapView.Editor
 
         private void CancelActive()
         {
+            ResetPlacementGestures();
+            Stage.ReleaseMouseCapture();
             if (Canvas1.Active == null) return;
             Canvas1.Active = null;
             Canvas1.ShowActiveHandles = false;

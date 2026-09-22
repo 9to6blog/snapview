@@ -786,7 +786,8 @@ namespace SnapView.Editor
         private void SelectTool(ToolKind kind)
         {
             CommitText();
-            ConfirmActive();          // 도구를 바꾸면 만들던 것을 확정한다
+            if (_numberArrowPhase != NumberArrowPhase.None) CancelActive();
+            else ConfirmActive();
 
             // 자동 선택 영역은 마술봉과 함께 산다. 다른 도구로 가면 치운다.
             if (kind != ToolKind.Wand && _wandMask != null)

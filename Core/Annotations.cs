@@ -1214,12 +1214,12 @@ namespace SnapView.Core
 
         internal void EnsureVisibleArrow(Vector fallback)
         {
-            Vector offset = Center - Tip;
+            Vector offset = Tip - Center;
             double minimum = Radius + Math.Max(28, Thickness * 8);
             if (offset.Length >= minimum) return;
             if (offset.Length < 1) offset = fallback.Length >= 1 ? fallback : new Vector(1, -1);
             offset.Normalize();
-            Center = Tip + offset * minimum;
+            Tip = Center + offset * minimum;
         }
 
         // 0 = 화살촉, 1 = 번호 원
@@ -1396,6 +1396,8 @@ namespace SnapView.Core
         }
     }
 
+    internal enum MagnifierPart { None, Display, Source }
+
     /// <summary>
     /// 돋보기: 원본의 한 곳을 동그란 창에 확대해 보여 준다. 어디를 확대했는지
     /// 가는 선과 작은 원으로 이어 준다. 세부를 짚어 설명하는 캡처의 단골 도구.
@@ -1452,8 +1454,15 @@ namespace SnapView.Core
             else if (index == 2) Radius = Math.Max(8, (p - SourceCenter).Length);
         }
 
-        internal override bool HitTest(Point p)
-            => (p - Center).Length <= DisplayRadius + 4 || (p - SourceCenter).Length <= 12;
+        internal MagnifierPart PartAt(Point p, double tolerance = 4)
+        {
+            // The displayed lens is painted above the source circle when they overlap.
+            if ((p - Center).Length <= DisplayRadius + tolerance) return MagnifierPart.Display;
+            if ((p - SourceCenter).Length <= Radius + tolerance) return MagnifierPart.Source;
+            return MagnifierPart.None;
+        }
+
+        internal override bool HitTest(Point p) => PartAt(p) != MagnifierPart.None;
 
         protected override Annotation CloneCore() => new MagnifierAnnotation
         {

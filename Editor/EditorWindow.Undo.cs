@@ -26,6 +26,7 @@ namespace SnapView.Editor
 
         private void Restore(EditorSnapshot snap)
         {
+            ResetPlacementGestures();
             WandClear();   // 마스크는 지금 그림에 맞춰진 것이다
             _image = snap.Image;
             _counter = snap.Counter;
@@ -48,6 +49,7 @@ namespace SnapView.Editor
         private void Undo()
         {
             CommitText();
+            if (_numberArrowPhase != NumberArrowPhase.None) { CancelActive(); return; }
             EditorSnapshot? snap = _undoStack.Undo(Current());
             if (snap != null) Restore(snap);
         }
@@ -63,6 +65,7 @@ namespace SnapView.Editor
         {
             if (Canvas1.Items.Count == 0 && Canvas1.Active == null) return;
             PushUndo();
+            ResetPlacementGestures();
             Canvas1.Items.Clear();
             Canvas1.Active = null;
             SetSelection(null);
