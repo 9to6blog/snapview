@@ -109,7 +109,7 @@ internal static partial class SelfTest
         string made = ImageIO.BuildName(s.FrameNamePattern, when, "휴가 영상");
         Check("원본 이름이 들어간다", made.Contains("휴가 영상"), made);
         Check("날짜와 시각이 들어간다", made.Contains("2026-08-23") && made.Contains("184512"), made);
-        Check("스냅뷰로 시작한다", made.StartsWith("스냅뷰_", StringComparison.Ordinal), made);
+        Check("SnapView로 시작한다", made.StartsWith("SnapView_", StringComparison.Ordinal), made);
 
         // 원본 이름을 모를 때 밑줄이 두 개 붙으면 안 된다.
         string none = ImageIO.BuildName(s.FrameNamePattern, when, null);
@@ -123,15 +123,47 @@ internal static partial class SelfTest
 
         // 아주 긴 이름은 경로 길이 제한에 걸린다.
         string longName = ImageIO.BuildName(s.FrameNamePattern, when, new string('가', 300));
-        Check("너무 길면 잘린다", longName.Length < 120, longName.Length + "자");
+        Check("너무 길면 잘린다", longName.Length < 160, longName.Length + "자");
 
-        // 캡처 쪽 규칙은 그대로여야 한다.
+        // 캡처는 날짜·시간·UUID를 항상 포함한다.
         string shot = ImageIO.BuildName(s.FileNamePattern, when, null);
-        Check("캡처 이름 규칙은 그대로", shot == "SnapView_2026-08-23_184512", shot);
+        Check("캡처 기본 이름 날짜·밀리초·UUID", shot.StartsWith("SnapView_2026-08-23_184512_000_") && Guid.TryParseExact(shot[^32..], "N", out _), shot);
 
         // 규칙이 깨져 있어도 저장은 되어야 한다.
         string broken = ImageIO.BuildName("{99}", when, "x");
         Check("규칙이 틀려도 이름이 나온다", broken.Length > 0, broken);
+    }
+
+    private static void TestCaptureNaming()
+    {
+        Section("날짜·시간·UUID 자동 이름과 기존 설정 이행");
+        var when = new DateTime(2026, 9, 24, 1, 2, 3, 456);
+        var names = new System.Collections.Generic.HashSet<string>();
+        bool valid = true;
+        for (int i = 0; i < 1000; i++)
+        {
+            string name = CaptureNames.Build(null, when, null);
+            valid &= name.StartsWith("SnapView_2026-09-24_010203_456_") && Guid.TryParseExact(name[^32..], "N", out _);
+            names.Add(name);
+        }
+        Check("같은 시각 1000개 모두 날짜·밀리초·UUID", valid);
+        Check("동시각에도 UUID 중복 없음", names.Count == 1000);
+        foreach (string pattern in new[] { "custom", "{0:yyyy}", "{99}", "", "{2:N}" })
+        {
+            string name = CaptureNames.Build(pattern, when, null);
+            Check("옛 규칙·깨진 규칙에도 날짜·시간 보충: " + pattern, name.Contains("2026-09-24_010203_456"));
+        }
+        string canonical = CaptureNames.Build(CaptureNames.DefaultPattern, when, null);
+        Check("새 기본 규칙은 시각·UUID를 한 번만 넣음", canonical.Length == "SnapView_2026-09-24_010203_456_".Length + 32);
+        var old = new Settings { SettingsVersion = 2, FileNamePattern = "SnapView_{0:yyyy-MM-dd_HHmmss}",
+            FrameNamePattern = "스냅뷰_{1}_{0:yyyy-MM-dd_HHmmss}", RecordNamePattern = "SnapView_{1}_{0:yyyy-MM-dd_HHmmss}", CaptureBoundarySnap = false };
+        old.Migrate();
+        Check("기존 캡처·장면·녹화 기본 규칙을 UUID 규칙으로 이행", old.FileNamePattern == CaptureNames.DefaultPattern && old.FrameNamePattern == CaptureNames.FramePattern && old.RecordNamePattern == RecordingNames.DefaultPattern);
+        string json = System.Text.Json.JsonSerializer.Serialize(old);
+        var reloaded = System.Text.Json.JsonSerializer.Deserialize<Settings>(json)!;
+        Check("핀 끄기는 저장·다시 읽기·설정 이행 뒤에도 유지", !reloaded.CaptureBoundarySnap);
+        var custom = new Settings { SettingsVersion = 2, FileNamePattern = "user-prefix" }; custom.Migrate();
+        Check("사용자 접두사는 유지하고 날짜·UUID만 보완", custom.FileNamePattern == "user-prefix" && ImageIO.BuildName(custom.FileNamePattern, when, null).StartsWith("user-prefix_2026-09-24_010203_456_"));
     }
 
     /// <summary>

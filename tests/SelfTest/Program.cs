@@ -31,6 +31,12 @@ internal static partial class SelfTest
 
         try
         {
+            if (Array.IndexOf(args, "--capture-regressions") >= 0)
+            {
+                TestAutoCropAndSnap(); TestImageIO(tmp); TestSettings(tmp); TestRecordingNames(); TestFrameNaming(); TestCaptureNaming();
+                Console.WriteLine($"\n결과: 통과 {_pass}, 실패 {_fail}");
+                return _fail == 0 ? 0 : 1;
+            }
             if (Array.IndexOf(args, "--capture-input") >= 0)
             {
                 TestCaptureAltTab();
@@ -384,8 +390,8 @@ internal static partial class SelfTest
         var when = new DateTime(2026, 8, 22, 13, 5, 0);
         string p1 = ImageIO.SaveAuto(img, s, when);
         string p2 = ImageIO.SaveAuto(img, s, when);
-        Check("자동 저장 이름 규칙", Path.GetFileName(p1) == "shot_20260822.png", Path.GetFileName(p1));
-        Check("같은 이름이면 (2) 를 붙인다", Path.GetFileName(p2) == "shot_20260822 (2).png", Path.GetFileName(p2));
+        Check("자동 저장에 사용자 접두사·날짜·시간·UUID 포함", Path.GetFileName(p1).StartsWith("shot_20260822_2026-08-22_130500_000_") && Guid.TryParseExact(Path.GetFileNameWithoutExtension(p1)[^32..], "N", out _), Path.GetFileName(p1));
+        Check("같은 밀리초에도 서로 다른 UUID로 저장", p1 != p2 && File.Exists(p1) && File.Exists(p2), Path.GetFileName(p2));
 
         var bad = new Settings { SaveFolder = tmp, ImageFormat = "png", FileNamePattern = "a/b:c*{0:HHmmss}" };
         string p3 = ImageIO.SaveAuto(img, bad, when);
@@ -517,14 +523,14 @@ internal static partial class SelfTest
 
         var when = new DateTime(2026, 9, 12, 16, 5, 7);
         string a = RecordingNames.Build("SnapView_{1}_{0:yyyyMMdd_HHmmss}", when, "전체 화면");
-        Check("{0} 은 시각, {1} 은 대상", a == "SnapView_전체 화면_20260912_160507", a);
+        Check("{0} 은 시각, {1} 은 대상", a.StartsWith("SnapView_전체 화면_20260912_160507_"), a);
 
         string b = RecordingNames.Build("{1}", when, "메모장 - a:b*c?");
-        Check("파일에 못 쓰는 글자는 바꾼다", b == "메모장 - a_b_c_", b);
+        Check("파일에 못 쓰는 글자는 바꾼다", b.StartsWith("메모장 - a_b_c_"), b);
 
         Check("규칙이 틀리면 기본 규칙으로", RecordingNames.Build("{0:", when, "x").StartsWith("SnapView_"));
         Check("빈 규칙도 기본 규칙으로", RecordingNames.Build("", when, "x").StartsWith("SnapView_"));
-        Check("너무 긴 대상 이름은 자른다", RecordingNames.Build("{1}", when, new string('가', 100)).Length <= 40);
+        Check("긴 대상은 40자 뒤에 날짜·시간·UUID", RecordingNames.Build("{1}", when, new string('가', 100)).StartsWith(new string('가', 40) + "_2026-09-12_160507_000_"));
         Check("대상이 없어도 이름이 된다", RecordingNames.Build(RecordingNames.DefaultPattern, when, null).Length > 10);
     }
 

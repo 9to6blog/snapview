@@ -21,12 +21,6 @@ namespace SnapView.Capture
         /// <summary>선택 영역(얼린 비트맵의 픽셀 좌표).</summary>
         internal Int32Rect Region { get; init; }
 
-        /// <summary>
-        /// 창을 통째로 골랐고 그 뒤 크기를 손대지 않았을 때의 창 핸들.
-        /// 이 값이 있으면 화면에서 잘라내는 대신 그 창만 다시 정확히 캡처할 수 있다.
-        /// </summary>
-        internal IntPtr WindowHandle { get; init; }
-
         /// <summary>확인 버튼 대신 무엇을 눌렀는지.</summary>
         internal OverlayAction Action { get; init; } = OverlayAction.Confirm;
     }
@@ -103,8 +97,6 @@ namespace SnapView.Capture
         private readonly SolidColorBrush _loupeBrush = new(Colors.Black);
         private WriteableBitmap? _loupeBitmap;
         private Size _loupeSize;
-        private bool _selDashed;
-        private static readonly DoubleCollection DashPattern = new() { 4, 3 };
         private static readonly Size Unbounded = new(double.PositiveInfinity, double.PositiveInfinity);
 
         private Phase _phase = Phase.Idle;
@@ -113,8 +105,9 @@ namespace SnapView.Capture
         private Rect _selection = Rect.Empty;      // DIP
         private Rect _resizeStart = Rect.Empty;
         private Handle _activeHandle = Handle.None;
-        private WindowCandidate? _hover;
-        private IntPtr _pickedWindow = IntPtr.Zero;
+        private bool _boundarySnap;
+        private bool _boundaryAnalysisStarted;
+        private readonly Action<bool>? _boundarySnapChanged;
         private volatile CropBoundaryAnalysis? _boundaryAnalysis;
         private readonly KeyboardHook _captureKeys = new();
 
@@ -129,7 +122,8 @@ namespace SnapView.Capture
         internal OverlayWindow(BitmapSource frozen, Int32Rect virtualScreen,
                                bool adjustBeforeCapture, bool showCrosshair,
                                OverlayPurpose purpose = OverlayPurpose.Capture,
-                               string confirmHint = "", bool startWithFullSelection = false)
+                               string confirmHint = "", bool startWithFullSelection = false,
+                               bool boundarySnap = true, Action<bool>? boundarySnapChanged = null)
         {
             InitializeComponent();
 
@@ -139,6 +133,9 @@ namespace SnapView.Capture
             _showCrosshair = showCrosshair;
             _purpose = purpose;
             _startWithFullSelection = startWithFullSelection;
+            _boundarySnap = boundarySnap;
+            _boundarySnapChanged = boundarySnapChanged;
+            PinBeforeSelection.IsChecked = PinAfterSelection.IsChecked = boundarySnap;
 
             // 배경은 어둡게 구운 것을 깔고, 선택 영역(Hole)에만 원본을 보여 준다.
             Backdrop.Source = Darken(frozen, 0x8A);
@@ -162,11 +159,13 @@ namespace SnapView.Capture
             LoupeSwatch.Fill = _loupeBrush;
             CreateHandles();
             UpdateHint();
-            BeginBoundaryAnalysis();
+            if (_boundarySnap) BeginBoundaryAnalysis();
         }
 
         private void BeginBoundaryAnalysis()
         {
+            if (_boundaryAnalysisStarted) return;
+            _boundaryAnalysisStarted = true;
             BitmapSource source = _frozen;
             if (!source.IsFrozen)
             {
@@ -244,7 +243,7 @@ namespace SnapView.Capture
         /// </summary>
         private Point SnapOverlayPoint(Point dip, bool snapX, bool snapY)
         {
-            if ((Keyboard.Modifiers & ModifierKeys.Alt) != 0) return dip;
+            if (!_boundarySnap || (Keyboard.Modifiers & ModifierKeys.Alt) != 0) return dip;
 
             double px = dip.X * PxPerDipX;
             double py = dip.Y * PxPerDipY;
@@ -253,19 +252,19 @@ namespace SnapView.Capture
             double bestX = px, bestY = py;
             double distX = tolX + 1, distY = tolY + 1;
 
-            CropSnapResult content = _boundaryAnalysis?.Snap(new Point(px, py), Math.Max(tolX, tolY)) ?? default;
+            CropSnapResult content = _boundaryAnalysis?.SnapLocal(new Point(px, py), Math.Max(tolX, tolY)) ?? default;
             if (snapX && content.X.HasValue) Consider(content.X.Value, px, tolX, ref bestX, ref distX);
             if (snapY && content.Y.HasValue) Consider(content.Y.Value, py, tolY, ref bestY, ref distY);
 
             foreach (WindowCandidate window in _windows)
             {
                 Int32Rect r = window.Rect;
-                if (snapX)
+                if (snapX && py >= r.Y - tolY && py <= r.Y + r.Height + tolY)
                 {
                     Consider(r.X, px, tolX, ref bestX, ref distX);
                     Consider(r.X + r.Width, px, tolX, ref bestX, ref distX);
                 }
-                if (snapY)
+                if (snapY && px >= r.X - tolX && px <= r.X + r.Width + tolX)
                 {
                     Consider(r.Y, py, tolY, ref bestY, ref distY);
                     Consider(r.Y + r.Height, py, tolY, ref bestY, ref distY);
@@ -341,9 +340,27 @@ namespace SnapView.Capture
                 _ => "영역"
             };
 
-            HintText.Text = _adjustBeforeCapture
-                ? $"드래그 {what} 선택   ·   자석 맞춤 M   ·   Alt 드래그 스냅 해제   ·   클릭 창 단위   ·   놓으면 조절 가능   ·   ESC 취소"
-                : $"드래그 {what} 선택   ·   자석 맞춤 M   ·   Alt 드래그 스냅 해제   ·   클릭 창 단위   ·   ESC 취소";
+            HintText.Text = $"드래그 {what} 선택   ·   핀 P: 경계 맞춤 {(_boundarySnap ? "켬" : "끔")}   ·   Alt: 잠시 해제   ·   " +
+                (_adjustBeforeCapture ? "놓으면 조절 가능   ·   " : "") + "ESC 취소";
+        }
+
+        private void OnSnapPin(object sender, RoutedEventArgs e)
+        { SetBoundarySnap(((System.Windows.Controls.Primitives.ToggleButton)sender).IsChecked == true); e.Handled = true; }
+
+        private bool IsOverSnapOptions(Point p)
+        {
+            double x = Canvas.GetLeft(SnapOptions), y = Canvas.GetTop(SnapOptions);
+            return SnapOptions.Visibility == Visibility.Visible && !double.IsNaN(x) && !double.IsNaN(y) &&
+                new Rect(x, y, SnapOptions.ActualWidth, SnapOptions.ActualHeight).Contains(p);
+        }
+
+        private void SetBoundarySnap(bool enabled)
+        {
+            _boundarySnap = enabled;
+            PinBeforeSelection.IsChecked = PinAfterSelection.IsChecked = enabled;
+            if (enabled) BeginBoundaryAnalysis();
+            _boundarySnapChanged?.Invoke(enabled);
+            UpdateHint();
         }
 
         /// <summary>
@@ -402,6 +419,12 @@ namespace SnapView.Capture
                              - (_hintAtBottom ? HintBar.ActualHeight : 0);
                 Canvas.SetLeft(HintBar, Math.Max(0, left));
                 Canvas.SetTop(HintBar, Math.Max(0, top));
+                SnapOptions.Measure(Unbounded);
+                Rect bounds = new Rect((mon.X - _virt.X) / PxPerDipX, (mon.Y - _virt.Y) / PxPerDipY,
+                    mon.Width / PxPerDipX, mon.Height / PxPerDipY);
+                (double pinX, double pinY) = ViewMath.ClampInto(bounds.Left, bounds.Top, bounds.Width, bounds.Height,
+                    bounds.Right - SnapOptions.DesiredSize.Width - 16, bounds.Top + 16, SnapOptions.DesiredSize.Width, SnapOptions.DesiredSize.Height);
+                Canvas.SetLeft(SnapOptions, pinX); Canvas.SetTop(SnapOptions, pinY);
             }
             catch { HintBar.Visibility = Visibility.Collapsed; }
         }
@@ -431,13 +454,18 @@ namespace SnapView.Capture
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonDown(e);
-            Point raw = e.GetPosition(Root);
+            if (e.Handled) return;
+            HandlePointerDown(e.GetPosition(Root), e.ClickCount);
+        }
+
+        private void HandlePointerDown(Point raw, int clicks)
+        {
             Point p = raw;
-            BtnMagnet.Content = "자석 맞춤";
+            BtnMagnet.Content = "영역 맞춤";
 
             if (_phase == Phase.Adjusting)
             {
-                if (e.ClickCount == 2 && _selection.Contains(p)) { Finish(OverlayAction.Confirm); return; }
+                if (clicks == 2 && _selection.Contains(p)) { Finish(OverlayAction.Confirm); return; }
 
                 Handle h = HitTest(p);
                 if (h is not Handle.None)
@@ -458,7 +486,6 @@ namespace SnapView.Capture
             // 왼쪽·위쪽은 다시 검사되지 않고 움직이는 오른쪽·아래쪽만 붙는다.
             _anchor = raw;
             _phase = Phase.Dragging;
-            _pickedWindow = IntPtr.Zero;
             _selection = new Rect(p, new Size(0, 0));
             HintBar.Visibility = Visibility.Collapsed;
             ActionBar.Visibility = Visibility.Collapsed;
@@ -469,7 +496,11 @@ namespace SnapView.Capture
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-            Point raw = e.GetPosition(Root);
+            HandlePointerMove(e.GetPosition(Root));
+        }
+
+        private void HandlePointerMove(Point raw)
+        {
             Point p = raw;
 
             switch (_phase)
@@ -485,7 +516,6 @@ namespace SnapView.Capture
                     double nx = Math.Clamp(_resizeStart.X + dx, 0, Math.Max(0, Root.ActualWidth - _resizeStart.Width));
                     double ny = Math.Clamp(_resizeStart.Y + dy, 0, Math.Max(0, Root.ActualHeight - _resizeStart.Height));
                     _selection = new Rect(nx, ny, _resizeStart.Width, _resizeStart.Height);
-                    _pickedWindow = IntPtr.Zero;   // 손댔으니 더는 "그 창"이 아니다
                     break;
                 }
 
@@ -496,11 +526,9 @@ namespace SnapView.Capture
                                                    Handle.SW or Handle.S or Handle.SE;
                     p = SnapOverlayPoint(raw, snapX, snapY);
                     _selection = Resize(_resizeStart, _activeHandle, p);
-                    _pickedWindow = IntPtr.Zero;
                     break;
 
                 case Phase.Idle:
-                    _hover = FindWindowAt(p);
                     break;
 
                 case Phase.Adjusting:
@@ -528,6 +556,7 @@ namespace SnapView.Capture
         private void UpdateCrosshair(Point p)
         {
             if (!_showCrosshair) return;
+            if (IsOverSnapOptions(p)) { SetCrosshairVisible(false); return; }
 
             // 액션 바 위에서는 거슬리므로 감춘다(돋보기와 같은 규칙).
             if (ActionBar.Visibility == Visibility.Visible)
@@ -561,10 +590,16 @@ namespace SnapView.Capture
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonUp(e);
-            Point p = e.GetPosition(Root);
+            if (e.Handled) return;
+            HandlePointerUp(e.GetPosition(Root));
+        }
+
+        private void HandlePointerUp(Point p)
+        {
 
             if (_phase is Phase.Moving or Phase.Resizing)
             {
+                HandlePointerMove(p);
                 ReleaseMouseCapture();
                 _phase = Phase.Adjusting;
                 _activeHandle = Handle.None;
@@ -573,6 +608,8 @@ namespace SnapView.Capture
             }
 
             if (_phase != Phase.Dragging) return;
+            // Use the release coordinate even if the final mouse move was coalesced.
+            _selection = ViewMath.SnapRectEdges(Normalize(_anchor, p), SnapOverlayPoint);
             ReleaseMouseCapture();
 
             bool wasClick = Math.Abs(p.X - _anchor.X) < ClickThreshold &&
@@ -580,12 +617,9 @@ namespace SnapView.Capture
 
             if (wasClick)
             {
-                // 드래그가 아니라 클릭 = 커서 아래 창을 통째로.
-                WindowCandidate? win = FindWindowAt(p);
-                if (win == null) { Cancel(); return; }
-
-                _selection = ToDip(win.Value.Rect);
-                _pickedWindow = win.Value.Hwnd;
+                // Region capture never becomes whole-window capture on a single click.
+                _selection = Rect.Empty; _phase = Phase.Idle;
+                UpdateVisuals(); PlaceHintBar(); return;
             }
             else if (ToPixels(_selection) is { Width: < 2 } or { Height: < 2 })
             {
@@ -665,6 +699,7 @@ namespace SnapView.Capture
             // 닫기 전에 처리 표시를 해야 포커스가 있던 버튼이나 바탕 앱에 전달되지 않는다.
             e.Handled = true;
             if (!_seenDown.Remove(e.Key)) return;
+
             if (e.Key == Key.Escape)
             {
                 // 영역을 골랐어도 다시 선택 단계로 돌아가지 않고 캡처 전체를 취소한다.
@@ -713,6 +748,7 @@ namespace SnapView.Capture
             base.OnKeyUp(e);
             if (!_seenDown.Remove(e.Key)) return;
 
+            if (e.Key == Key.P) { SetBoundarySnap(!_boundarySnap); e.Handled = true; return; }
             if (e.Key == Key.M)
             {
                 AutoFitSelection();
@@ -748,7 +784,6 @@ namespace SnapView.Capture
             y = Math.Clamp(y, 0, Math.Max(0, Root.ActualHeight - h));
 
             _selection = new Rect(x, y, w, h);
-            _pickedWindow = IntPtr.Zero;
             UpdateVisuals();
         }
 
@@ -771,7 +806,6 @@ namespace SnapView.Capture
             {
                 Int32Rect? target = null;
                 string description = "";
-                IntPtr targetWindow = IntPtr.Zero;
 
                 var cropped = new CroppedBitmap(_frozen, current);
                 cropped.Freeze();
@@ -793,7 +827,6 @@ namespace SnapView.Capture
                 if (!target.HasValue && FindContainedWindow(current) is { } window)
                 {
                     target = window.Rect;
-                    targetWindow = window.Hwnd;
                     description = "창 경계 자동 맞춤";
                 }
 
@@ -805,7 +838,6 @@ namespace SnapView.Capture
                 }
 
                 _selection = ToDip(target.Value);
-                _pickedWindow = targetWindow;
                 _phase = Phase.Adjusting;
                 BtnMagnet.Content = "맞춤 ✓";
                 BtnMagnet.ToolTip = description + " — 이 영역이 그대로 캡처됩니다 (M으로 다시 분석)";
@@ -899,21 +931,6 @@ namespace SnapView.Capture
             _ => Cursors.Cross
         };
 
-        private WindowCandidate? FindWindowAt(Point dip)
-        {
-            int bx = (int)Math.Round(dip.X * PxPerDipX);
-            int by = (int)Math.Round(dip.Y * PxPerDipY);
-
-            // z-order 위→아래 순서라 처음 걸리는 게 제일 위에 있는 창이다.
-            foreach (WindowCandidate c in _windows)
-            {
-                Int32Rect r = c.Rect;
-                if (bx >= r.X && bx < r.X + r.Width && by >= r.Y && by < r.Y + r.Height)
-                    return c;
-            }
-            return null;
-        }
-
         // ---------------- 확정 ----------------
 
         private void Finish(OverlayAction action)
@@ -924,7 +941,6 @@ namespace SnapView.Capture
             Result = new OverlayResult
             {
                 Region = px,
-                WindowHandle = _pickedWindow,
                 Action = action
             };
             DialogResult = true;
@@ -949,20 +965,14 @@ namespace SnapView.Capture
         private void UpdateVisuals()
         {
             Rect clear;
-            bool dashed = false;
             bool showHandles = false;
+            SnapOptions.Visibility = _phase == Phase.Idle ? Visibility.Visible : Visibility.Collapsed;
 
             if (_phase == Phase.Idle)
             {
-                if (_hover.HasValue) { clear = ToDip(_hover.Value.Rect); dashed = true; }
-                else
-                {
-                    Hole.Visibility = Visibility.Collapsed;
-                    SelBorder.Visibility = Visibility.Collapsed;
-                    SizeTip.Visibility = Visibility.Collapsed;
-                    ShowHandles(false);
-                    return;
-                }
+                Hole.Visibility = SelBorder.Visibility = SizeTip.Visibility = ActionBar.Visibility = Visibility.Collapsed;
+                ShowHandles(false);
+                return;
             }
             else
             {
@@ -983,15 +993,10 @@ namespace SnapView.Capture
             SelBorder.Visibility = Visibility.Visible;
             SelBorder.Width = Math.Max(0, clear.Width);
             SelBorder.Height = Math.Max(0, clear.Height);
-            if (dashed != _selDashed)
-            {
-                SelBorder.StrokeDashArray = dashed ? DashPattern : null;
-                _selDashed = dashed;
-            }
             Canvas.SetLeft(SelBorder, clear.X);
             Canvas.SetTop(SelBorder, clear.Y);
 
-            Int32Rect px = _phase == Phase.Idle && _hover.HasValue ? _hover.Value.Rect : ToPixels(clear);
+            Int32Rect px = ToPixels(clear);
             SizeText.Text = px.Width.ToString(CultureInfo.InvariantCulture) + " × " +
                             px.Height.ToString(CultureInfo.InvariantCulture);
             SizeTip.Visibility = Visibility.Visible;
@@ -1095,6 +1100,7 @@ namespace SnapView.Capture
         private void UpdateLoupe(Point dip)
         {
             if (_frozen.PixelWidth < LoupePixels || _frozen.PixelHeight < LoupePixels) return;
+            if (IsOverSnapOptions(dip)) { Loupe.Visibility = Visibility.Collapsed; return; }
 
             // 액션 바 위에서는 돋보기가 거슬리므로 숨긴다.
             if (ActionBar.Visibility == Visibility.Visible)

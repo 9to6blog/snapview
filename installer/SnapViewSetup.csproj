@@ -29,6 +29,7 @@
     <Compile Include="..\Core\Log.cs" Link="Shared\Log.cs" />
     <Compile Include="..\Core\Settings.cs" Link="Shared\Settings.cs" />
     <Compile Include="..\Core\RecordingNames.cs" />
+    <Compile Include="..\Core\CaptureNames.cs" />
   </ItemGroup>
 
   <ItemGroup>

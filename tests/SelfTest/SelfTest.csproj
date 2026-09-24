@@ -44,6 +44,7 @@
     <Compile Include="..\..\Core\VideoInfo.cs" />
     <Compile Include="..\..\Core\Settings.cs" />
     <Compile Include="..\..\Core\RecordingNames.cs" />
+    <Compile Include="..\..\Core\CaptureNames.cs" />
     <Compile Include="..\..\Core\Log.cs" />
     <Compile Include="..\..\Core\ViewMath.cs" />
     <Compile Include="..\..\Core\ImageEffects.cs" />

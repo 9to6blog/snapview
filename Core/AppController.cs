@@ -546,7 +546,8 @@ namespace SnapView.Core
                 Int32Rect virt = ScreenCapture.VirtualScreen();
 
                 _overlay = new OverlayWindow(frozen, virt, adjustBeforeCapture: true,
-                                             _settings.ShowCrosshair, OverlayPurpose.Record);
+                                             _settings.ShowCrosshair, OverlayPurpose.Record,
+                                             boundarySnap: _settings.CaptureBoundarySnap, boundarySnapChanged: SaveCaptureBoundarySnap);
                 _overlay.ShowDialog();
                 OverlayResult? picked = _overlay.Result;
                 _overlay = null;
@@ -811,6 +812,12 @@ namespace SnapView.Core
 
         // ===================================================== 캡처
 
+        private void SaveCaptureBoundarySnap(bool enabled)
+        {
+            _settings.CaptureBoundarySnap = enabled;
+            _settings.Save();
+        }
+
         private void CaptureRegion()
         {
             if (_overlay != null) return;   // 이미 선택 중
@@ -824,7 +831,8 @@ namespace SnapView.Core
 
                 _overlay = new OverlayWindow(frozen, virt, _settings.AdjustBeforeCapture,
                                              _settings.ShowCrosshair,
-                                             OverlayPurpose.Capture, ConfirmHint());
+                                             OverlayPurpose.Capture, ConfirmHint(),
+                                             boundarySnap: _settings.CaptureBoundarySnap, boundarySnapChanged: SaveCaptureBoundarySnap);
                 _overlay.ShowDialog();
                 OverlayResult? result = _overlay.Result;
                 _overlay = null;
@@ -869,19 +877,11 @@ namespace SnapView.Core
         }
 
         /// <summary>
-        /// 오버레이 결과를 실제 이미지로 바꾼다. 창을 통째로 골랐고 크기를 손대지 않았다면
-        /// 얼린 화면에서 잘라내는 대신 그 창만 다시 정확히 캡처한다.
+        /// 영역 캡처는 항상 사용자가 본 얼린 화면의 선택 영역을 그대로 잘라낸다.
+        /// 별도의 활성 창 캡처만 CaptureWindowSmart를 사용한다.
         /// </summary>
         private BitmapSource? ResolveSelection(BitmapSource frozen, OverlayResult result)
         {
-            if (result.WindowHandle != IntPtr.Zero && _settings.UseGraphicsCapture)
-            {
-                BitmapSource? win = ScreenCapture.CaptureWindowSmart(
-                    result.WindowHandle, _settings.IncludeCursor, true,
-                    out ScreenCapture.WindowCaptureMethod _, out string _);
-                if (win != null) return win;
-            }
-
             var crop = new CroppedBitmap(frozen, result.Region);
             crop.Freeze();
             return crop;
@@ -904,7 +904,8 @@ namespace SnapView.Core
                 Int32Rect virt = ScreenCapture.VirtualScreen();
                 _overlay = new OverlayWindow(frozen, virt, adjustBeforeCapture: true,
                                              _settings.ShowCrosshair, OverlayPurpose.Capture,
-                                             ConfirmHint(), startWithFullSelection: true);
+                                             ConfirmHint(), startWithFullSelection: true,
+                                             boundarySnap: _settings.CaptureBoundarySnap, boundarySnapChanged: SaveCaptureBoundarySnap);
                 _overlay.ShowDialog();
                 OverlayResult? result = _overlay.Result;
                 _overlay = null;
@@ -1209,6 +1210,9 @@ namespace SnapView.Core
 
                 if (win.Result != null)
                 {
+                    // Capture pin can change while this modeless settings window is open.
+                    // This dialog has no pin control, so preserve the most recent capture choice.
+                    win.Result.CaptureBoundarySnap = _settings.CaptureBoundarySnap;
                     _settings = win.Result;
                     _settings.Save();
                     _settings.ApplyStartupRegistration();

@@ -288,6 +288,7 @@ static partial class Program
             TestNumberArrowEditing(Path.Combine(tmp, "arrow-edits"), args.Length > 1 ? Path.GetFullPath(args[1]) : null);
             TestGroupsAndGuides(Path.Combine(tmp, "groups-guides"), args.Length > 2 ? Path.GetFullPath(args[2]) : null);
             TestAiDialogs(Path.Combine(tmp, "ai"), args.Length > 3 ? Path.GetFullPath(args[3]) : null);
+            TestCaptureSelection(Path.Combine(tmp, "capture"), args.Length > 4 ? Path.GetFullPath(args[4]) : null);
             Window w = TestMagnifiers(Path.Combine(tmp, "magnifiers"));
             TestToast(w, args.Length > 0 ? Path.GetFullPath(args[0]) : null);
             Console.WriteLine($"RESULT: {passed} interaction checks passed"); return 0;

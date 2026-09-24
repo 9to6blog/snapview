@@ -42,6 +42,9 @@ namespace SnapView.Core
         private readonly byte[] _pixels;
         private readonly List<SnapLine> _vertical = new();
         private readonly List<SnapLine> _horizontal = new();
+        private readonly List<EdgeSegment> _verticalSegments = new();
+        private readonly List<EdgeSegment> _horizontalSegments = new();
+        private readonly record struct EdgeSegment(int Position, int Start, int End, double Score);
 
         internal AutoCropResult? AutoCrop { get; }
         /// <summary>
@@ -91,6 +94,26 @@ namespace SnapView.Core
             double? x = Nearest(_vertical, p.X, tolerance);
             double? y = Nearest(_horizontal, p.Y, tolerance);
             return new CropSnapResult(x, y);
+        }
+
+        /// <summary>화면 일부에만 있는 카드 경계도 해당 선 구간 근처에서만 자석으로 쓴다.</summary>
+        internal CropSnapResult SnapLocal(Point p, double tolerance)
+            => new(NearestSegment(_verticalSegments, p.X, p.Y, tolerance),
+                   NearestSegment(_horizontalSegments, p.Y, p.X, tolerance));
+
+        private static double? NearestSegment(List<EdgeSegment> segments, double value, double along, double tolerance)
+        {
+            EdgeSegment? best = null;
+            double distance = double.MaxValue;
+            foreach (var line in segments)
+            {
+                if (along < line.Start - tolerance || along > line.End + tolerance) continue;
+                double d = Math.Abs(line.Position - value);
+                if (d > tolerance) continue;
+                if (d < distance - 0.001 || (Math.Abs(d - distance) <= 0.001 && (!best.HasValue || line.Score > best.Value.Score)))
+                { best = line; distance = d; }
+            }
+            return best?.Position;
         }
 
         private AutoCropResult? FindAutoCrop()
@@ -377,32 +400,63 @@ namespace SnapView.Core
 
         private double EdgeScoreVertical(int x, int step)
         {
+            int runStart = -1, runLast = -1, runCount = 0;
+            long runTotal = 0;
             int samples = 0, strong = 0, veryStrong = 0;
             long total = 0;
             for (int y = 0; y < _height; y += step)
             {
                 int d = PixelDifference(x - 1, y, x, y);
+                TrackSegment(_verticalSegments, x, y, step, d, ref runStart, ref runLast, ref runCount, ref runTotal);
                 total += d;
                 if (d >= 28) strong++;
                 if (d >= 70) veryStrong++;
                 samples++;
             }
+            FlushSegment(_verticalSegments, x, step, ref runStart, ref runLast, ref runCount, ref runTotal);
             return Score(samples, strong, veryStrong, total);
         }
 
         private double EdgeScoreHorizontal(int y, int step)
         {
+            int runStart = -1, runLast = -1, runCount = 0;
+            long runTotal = 0;
             int samples = 0, strong = 0, veryStrong = 0;
             long total = 0;
             for (int x = 0; x < _width; x += step)
             {
                 int d = PixelDifference(x, y - 1, x, y);
+                TrackSegment(_horizontalSegments, y, x, step, d, ref runStart, ref runLast, ref runCount, ref runTotal);
                 total += d;
                 if (d >= 28) strong++;
                 if (d >= 70) veryStrong++;
                 samples++;
             }
+            FlushSegment(_horizontalSegments, y, step, ref runStart, ref runLast, ref runCount, ref runTotal);
             return Score(samples, strong, veryStrong, total);
+        }
+
+        private static void TrackSegment(List<EdgeSegment> lines, int position, int along, int step, int difference,
+            ref int start, ref int last, ref int count, ref long total)
+        {
+            if (difference >= 28)
+            {
+                if (start < 0) start = along;
+                last = along; count++; total += difference;
+            }
+            else if (start >= 0 && along - last > step * 2)
+                FlushSegment(lines, position, step, ref start, ref last, ref count, ref total);
+        }
+
+        private static void FlushSegment(List<EdgeSegment> lines, int position, int step,
+            ref int start, ref int last, ref int count, ref long total)
+        {
+            int length = last - start + step;
+            // Physical-length and continuity thresholds are independent of desktop aspect ratio.
+            // Short glyph edges and scattered photo texture must not become capture boundaries.
+            if (start >= 0 && length >= 64 && count * step >= length * 0.8)
+                lines.Add(new EdgeSegment(position, start, last + step, total / (double)count));
+            start = last = -1; count = 0; total = 0;
         }
 
         private static double Score(int samples, int strong, int veryStrong, long total)

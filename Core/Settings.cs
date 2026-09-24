@@ -36,6 +36,8 @@ namespace SnapView.Core
 
         /// <summary>영역 선택 중 커서를 지나는 십자 안내선을 화면 끝까지 긋는다.</summary>
         public bool ShowCrosshair { get; set; } = true;
+        /// <summary>영역 캡처의 핀. 끄면 다음 캡처에서도 드래그 경계 자석을 쓰지 않는다.</summary>
+        public bool CaptureBoundarySnap { get; set; } = true;
 
         /// <summary>창 캡처에 Windows.Graphics.Capture 를 쓴다(겹친 창이 안 찍힘).</summary>
         public bool UseGraphicsCapture { get; set; } = true;
@@ -44,7 +46,7 @@ namespace SnapView.Core
         public bool OpenEditorAfterCapture { get; set; } = false;
 
         public string SaveFolder { get; set; } = DefaultSaveFolder;
-        public string FileNamePattern { get; set; } = "SnapView_{0:yyyy-MM-dd_HHmmss}";
+        public string FileNamePattern { get; set; } = CaptureNames.DefaultPattern;
 
         /// <summary>
         /// 영상에서 뜬 장면의 이름 규칙. <c>{0}</c> 은 시각, <c>{1}</c> 은 원본 파일 이름.
@@ -52,7 +54,7 @@ namespace SnapView.Core
         /// 캡처와 다른 규칙을 쓴다. 장면은 <b>어느 영상에서 나왔는지</b>가 이름에 남아야
         /// 쓸모가 있다 — 날짜만 있으면 나중에 폴더를 열었을 때 무엇을 찍은 것인지 알 수 없다.
         /// </summary>
-        public string FrameNamePattern { get; set; } = "스냅뷰_{1}_{0:yyyy-MM-dd_HHmmss}";
+        public string FrameNamePattern { get; set; } = CaptureNames.FramePattern;
         /// <summary>"png" 또는 "jpg".</summary>
         public string ImageFormat { get; set; } = "png";
         public int JpegQuality { get; set; } = 92;
@@ -196,7 +198,7 @@ namespace SnapView.Core
         public int SettingsVersion { get; set; }
 
         [JsonIgnore]
-        internal const int CurrentSettingsVersion = 2;
+        internal const int CurrentSettingsVersion = 3;
 
         /// <summary>옛 판 파일이면 새 항목을 옛 값으로 채운다. 불러온 직후 한 번 부른다.</summary>
         internal void Migrate()
@@ -206,6 +208,12 @@ namespace SnapView.Core
                 // 2판에서 녹화음이 캡처음과 갈라졌다. 그 전엔 캡처음 설정이 둘 다를 맡았으니 그대로 잇는다.
                 PlayRecordSound = PlayShutterSound;
                 RecordSoundVolume = ShutterVolume;
+            }
+            if (SettingsVersion < 3)
+            {
+                if (FileNamePattern == "SnapView_{0:yyyy-MM-dd_HHmmss}") FileNamePattern = CaptureNames.DefaultPattern;
+                if (FrameNamePattern == "스냅뷰_{1}_{0:yyyy-MM-dd_HHmmss}") FrameNamePattern = CaptureNames.FramePattern;
+                if (RecordNamePattern == "SnapView_{1}_{0:yyyy-MM-dd_HHmmss}") RecordNamePattern = RecordingNames.DefaultPattern;
             }
             SettingsVersion = CurrentSettingsVersion;
         }

@@ -209,37 +209,12 @@ namespace SnapView.Core
         }
 
         /// <summary>
-        /// 이름 규칙을 실제 이름으로 바꾼다. {0} 은 시각, {1} 은 원본 이름.
+        /// 이름 규칙을 실제 이름으로 바꾼다. {0}은 시각, {1}은 원본 이름, {2:N}은 UUID.
         ///
-        /// 원본 이름이 없으면 그 자리를 빼고 <b>남는 밑줄도 같이 정리</b>한다.
-        /// 안 그러면 "스냅뷰__2026-08-23" 처럼 밑줄이 두 개 붙는다.
+        /// 날짜·시간·UUID가 빠진 기존 규칙에도 해당 값을 보충한다.
         /// </summary>
         internal static string BuildName(string pattern, DateTime when, string? source)
-        {
-            string name = Sanitize(source ?? "");
-
-            // 파일 이름이 너무 길면 경로 길이 제한에 걸린다. 앞쪽만 남긴다.
-            if (name.Length > 60) name = name[..60].TrimEnd();
-
-            string made;
-            try { made = string.Format(CultureInfo.InvariantCulture, pattern, when, name); }
-            catch { made = "SnapView_" + when.ToString("yyyy-MM-dd_HHmmss", CultureInfo.InvariantCulture); }
-
-            if (name.Length == 0)
-            {
-                made = made.Replace("__", "_");
-                made = made.Trim('_', ' ', '-');
-            }
-
-            return Sanitize(made);
-        }
-
-        private static string Sanitize(string name)
-        {
-            foreach (char c in Path.GetInvalidFileNameChars())
-                name = name.Replace(c, '_');
-            return name.Trim().Length == 0 ? "SnapView" : name.Trim();
-        }
+            => CaptureNames.Build(pattern, when, source);
 
         // ===================== 클립보드 =====================
 

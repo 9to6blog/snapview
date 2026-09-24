@@ -49,7 +49,7 @@ namespace SnapView.Editor
             {
                 Filter = ProjectFile.Filter,
                 DefaultExt = ProjectFile.Extension,
-                FileName = "스냅뷰_프로젝트_" + DateTime.Now.ToString("yyyy-MM-dd_HHmmss")
+                FileName = CaptureNames.Build("SnapView_프로젝트", DateTime.Now, null)
             };
             if (dlg.ShowDialog(this) != true) return;
 
@@ -649,7 +649,7 @@ namespace SnapView.Editor
             {
                 Title = "꾸민 그림 저장",
                 Filter = "PNG 이미지|*.png|JPEG 이미지|*.jpg",
-                FileName = "SnapView_" + DateTime.Now.ToString("yyyy-MM-dd_HHmmss", CultureInfo.InvariantCulture),
+                FileName = CaptureNames.Build(null, DateTime.Now, null),
                 DefaultExt = ".png"
             };
             if (sfd.ShowDialog() != true) return;

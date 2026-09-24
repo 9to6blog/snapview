@@ -121,6 +121,7 @@ namespace SnapView.Prefs
             OpenEditorAfterCapture = s.OpenEditorAfterCapture,
             AdjustBeforeCapture = s.AdjustBeforeCapture,
             ShowCrosshair = s.ShowCrosshair,
+            CaptureBoundarySnap = s.CaptureBoundarySnap,
             UseGraphicsCapture = s.UseGraphicsCapture,
             IncludeCursor = s.IncludeCursor,
             PlayShutterSound = s.PlayShutterSound,
@@ -325,7 +326,7 @@ namespace SnapView.Prefs
             _working.SaveFolder = string.IsNullOrWhiteSpace(TbFolder.Text)
                 ? Settings.DefaultSaveFolder : TbFolder.Text.Trim();
             _working.FileNamePattern = string.IsNullOrWhiteSpace(TbPattern.Text)
-                ? "SnapView_{0:yyyy-MM-dd_HHmmss}" : TbPattern.Text.Trim();
+                ? CaptureNames.DefaultPattern : TbPattern.Text.Trim();
             _working.ImageFormat = RbJpg.IsChecked == true ? "jpg" : "png";
             _working.JpegQuality = (int)SlQuality.Value;
 
@@ -384,14 +385,14 @@ namespace SnapView.Prefs
             string name;
             try
             {
-                name = string.Format(CultureInfo.InvariantCulture, TbPattern.Text, DateTime.Now);
+                name = ImageIO.BuildName(TbPattern.Text, DateTime.Now, null);
             }
             catch
             {
-                TbPreview.Text = "이름 규칙이 올바르지 않습니다. 예: SnapView_{0:yyyy-MM-dd_HHmmss}";
+                TbPreview.Text = "이름 규칙이 올바르지 않습니다. 예: " + CaptureNames.DefaultPattern;
                 return;
             }
-            TbPreview.Text = "예시:  " + name + ext + "      ({0} 자리에 캡처한 시각이 들어갑니다)";
+            TbPreview.Text = "예시:  " + name + ext + "\n{0}: 날짜·시간 · {2:N}: UUID · 빠진 날짜·시간·UUID는 자동으로 붙습니다.";
         }
 
         /// <summary>전역 단축키 칸들. 순서는 아래 안내 칸과 짝이 맞아야 한다.</summary>
@@ -531,7 +532,7 @@ namespace SnapView.Prefs
             if (TbRecPreview == null || TbRecPattern == null) return;
             string ext = RbGif?.IsChecked == true ? ".gif" : ".mp4";
             TbRecPreview.Text = "예시:  " + RecordingNames.Build(TbRecPattern.Text, DateTime.Now, "전체 화면") + ext +
-                                "      ({0} 자리에 시각, {1} 자리에 무엇을 찍었는지가 들어갑니다)";
+                                "\n{0}: 날짜·시간 · {1}: 대상 · {2:N}: UUID · 빠진 날짜·시간·UUID는 자동으로 붙습니다.";
         }
 
         private void UpdateAssocNote()

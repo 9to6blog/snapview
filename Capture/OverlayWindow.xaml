@@ -13,6 +13,39 @@
         SnapsToDevicePixels="True"
         Cursor="Cross">
 
+    <Window.Resources>
+        <Style x:Key="CapturePin" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="#FFD8D8DE"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="Cursor" Value="Arrow"/>
+            <Setter Property="ToolTip" Value="핀 켜기: 드래그 경계 자동 맞춤 · 끄면 다음 캡처에도 유지 (P)"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"
+                                      Stroke="{TemplateBinding Foreground}" StrokeThickness="1.6" StrokeLineJoin="Round"
+                                      Data="M 7,2 L 17,2 M 9,2 L 9,9 L 5,13 L 5,15 L 19,15 L 19,13 L 15,9 L 15,2 M 12,15 L 12,22"/>
+                                <TextBlock Text="경계 맞춤" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="StateLabel" Text="끔" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Background" Value="#FF20466C"/>
+                                <Setter Property="Foreground" Value="#FF91C9FF"/>
+                                <Setter TargetName="StateLabel" Property="Text" Value="켬"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#FF354657"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid x:Name="Root" ClipToBounds="True">
 
         <!-- 얼려 둔 화면. Stretch=Fill 이라 DPI 가 섞인 멀티모니터에서도 1:1 로 대응된다.
@@ -89,6 +122,9 @@
 
         <!-- 마우스를 받는 UI (액션 바) -->
         <Canvas x:Name="UiLayer" Background="Transparent" IsHitTestVisible="True">
+            <Border x:Name="SnapOptions" Background="#F5202027" BorderBrush="#FF3A3A42" BorderThickness="1" CornerRadius="6" Padding="3">
+                <ToggleButton x:Name="PinBeforeSelection" Style="{StaticResource CapturePin}" Click="OnSnapPin"/>
+            </Border>
             <Border x:Name="ActionBar" Visibility="Collapsed" Cursor="Arrow"
                     Background="#F5202027" BorderBrush="#FF3A3A42" BorderThickness="1"
                     CornerRadius="8" Padding="4">
@@ -99,8 +135,9 @@
                             ToolTip="클립보드에만 넣는다. 파일로는 저장하지 않는다 (C)" Click="OnActionCopy"/>
                     <Button x:Name="BtnSave" Style="{StaticResource ToolButton}" Content="저장"
                             ToolTip="파일로만 저장한다. 클립보드에는 안 넣는다 (S · Space)" Click="OnActionSave"/>
-                    <Button x:Name="BtnMagnet" Style="{StaticResource ToolButton}" Content="자석 맞춤"
-                            ToolTip="현재 선택 안의 실제 콘텐츠 경계를 찾아 캡처 영역을 자동으로 맞춘다 (M)"
+                    <ToggleButton x:Name="PinAfterSelection" Style="{StaticResource CapturePin}" Click="OnSnapPin"/>
+                    <Button x:Name="BtnMagnet" Style="{StaticResource ToolButton}" Content="영역 맞춤"
+                            ToolTip="현재 선택을 한 번만 콘텐츠 경계에 맞춘다 · 핀 상태와 별개 (M)"
                             Click="OnAutoFitSelection"/>
                     <Rectangle x:Name="ActionSeparator" Style="{StaticResource ToolSeparator}"/>
                     <Button x:Name="BtnOk" Style="{StaticResource ToolButton}"
